@@ -1,0 +1,6 @@
+backend/build
+.venv/
+backend/output/
+__pycache__/
+*.csv
+.DS_Store

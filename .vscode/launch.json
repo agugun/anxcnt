@@ -1,0 +1,54 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Simulation Physics",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/build/${input:selectedPhysics}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/backend",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build physics",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "Launch Streamlit UI",
+            "type": "python",
+            "request": "launch",
+            "module": "streamlit",
+            "args": [
+                "run",
+                "${workspaceFolder}/ui/app.py"
+            ],
+            "cwd": "${workspaceFolder}/ui",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend/build"
+            },
+            "console": "integratedTerminal"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "selectedPhysics",
+            "type": "pickString",
+            "description": "Select the simulation physics module to build/debug",
+            "options": [
+                "heat_1d_implicit",
+                "pressure_diffusivity_1d"
+            ],
+            "default": "heat_1d_implicit"
+        }
+    ]
+}

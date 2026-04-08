@@ -1,0 +1,47 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build physics",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "build_physics",
+                "PHYSICS=${input:selectedPhysics}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "clean"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "selectedPhysics",
+            "type": "pickString",
+            "description": "Select the simulation physics module to build/debug",
+            "options": [
+                "heat_1d_implicit",
+                "pressure_diffusivity_1d"
+            ],
+            "default": "heat_1d_implicit"
+        }
+    ]
+}
