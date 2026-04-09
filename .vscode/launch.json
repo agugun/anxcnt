@@ -5,10 +5,10 @@
             "name": "Debug Simulation Physics",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/backend/build/${input:selectedPhysics}",
+            "program": "${workspaceFolder}/src/build/${input:selectedPhysics}",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}/backend",
+            "cwd": "${workspaceFolder}/src",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
@@ -29,12 +29,12 @@
             "module": "streamlit",
             "args": [
                 "run",
-                "${workspaceFolder}/ui/app.py"
+                "${workspaceFolder}/web/app.py"
             ],
             "cwd": "${workspaceFolder}/ui",
             "python": "${workspaceFolder}/.venv/bin/python",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/backend/build"
+                "PYTHONPATH": "${workspaceFolder}/src/build"
             },
             "console": "integratedTerminal"
         }
@@ -46,9 +46,10 @@
             "description": "Select the simulation physics module to build/debug",
             "options": [
                 "heat_1d_implicit",
-                "pressure_diffusivity_1d"
+                "pressure_diffusivity_1d",
+                "base"
             ],
-            "default": "heat_1d_implicit"
+            "default": "base"
         }
     ]
 }

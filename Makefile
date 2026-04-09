@@ -1,15 +1,15 @@
 # NumPhys Root Makefile
 
-.PHONY: all backend interface clean
+.PHONY: all src bindings clean
 
-all: backend interface
+all: src bindings
 
-backend:
-	$(MAKE) -C backend all
+src:
+	$(MAKE) -C src all
 
-interface:
-	$(MAKE) -C interface all
+bindings:
+	$(MAKE) -C bindings all
 
 clean:
-	$(MAKE) -C backend clean
-	$(MAKE) -C interface clean
+	$(MAKE) -C src clean
+	$(MAKE) -C bindings clean

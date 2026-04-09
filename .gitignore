@@ -1,6 +1,14 @@
-backend/build
+src/build
 .venv/
-backend/output/
+src/output/
+src/results/
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.ipynb_checkpoints/
 *.csv
 .DS_Store
+.vscode/launch.json
+.vscode/tasks.json
+

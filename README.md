@@ -1,12 +1,12 @@
 # NumPhys
 
-A numerical physics project incorporating a C++ backend and a Python data science/visualization stack.
+A numerical physics project incorporating a C++ src and a Python data science/visualization stack.
 
 ## Project Structure
-- `backend/` - C++ kernel and simulation files.
-- `interface/` - Python-C++ bridge and integration layer.
+- `src/` - C++ kernel and simulation files.
+- `bindings/` - Python-C++ bridge and bindings layer.
 - `notebook/` - Jupyter notebooks for running experiments and visualizations.
-- `ui/` - Directory for Streamlit UI components.
+- `web/` - Directory for Streamlit UI components.
 
 ## Setup Instructions
 
@@ -14,7 +14,7 @@ Follow these step-by-step instructions to set up the Python environment for the 
 
 ### 1. Prerequisites
 - **Python 3.8+** installed on your system.
-- **C++ Compiler** (e.g., GCC/Clang or MSVC) for the backend.
+- **C++ Compiler** (e.g., GCC/Clang or MSVC) for the src.
 
 ### 2. Create the Python Virtual Environment
 Navigate to the root directory of the project in your terminal, and create a virtual environment:
@@ -52,14 +52,14 @@ jupyter notebook
 
 ### 6. Build the C++ Backend (High Performance)
 
-The backend uses a unified build system via a **Makefile**. To compile the Python bridge and the standalone C++ executables:
+The src uses a unified build system via a **Makefile**. To compile the Python bridge and the standalone C++ executables:
 
 ```bash
-cd backend
+cd src
 make all
 ```
 
-This will create a `backend/build/` directory containing:
+This will create a `src/build/` directory containing:
 - `cnt.so`: The Python interface module.
 - `heat_sim`: A standalone C++ executable for the 1D Heat Equation.
 
@@ -73,7 +73,7 @@ make clean
 To launch the real-time simulation dashboard with Plotly visualization:
 
 ```bash
-streamlit run ui/app.py
+streamlit run web/app.py
 ```
 This will open a web interface where you can adjust physical parameters (diffusivity, time step) and observe the thermal evolution instantly.
 
@@ -85,9 +85,9 @@ Each physics module (e.g., `heat_1d_implicit`) can be built and debugged dynamic
 1.  **Build a Module**: Press **Ctrl+Shift+B** (or **Run Task** -> **build physics**). You will be prompted to select a module from the list.
 2.  **Debug a Module**: Press **F5** (or **Run and Debug** -> **Debug Simulation Physics**). You will be prompted to select a module. VS Code will automatically build the latest version with debug symbols (`-g`) and start the debugger.
 
-3.  **Launch Streamlit UI**: Press **F5** and select **Launch Streamlit UI** from the debug configuration dropdown. This will start the web dashboard using the project's virtual environment and automatically configure the `PYTHONPATH` to find the C++ backend.
+3.  **Launch Streamlit UI**: Press **F5** and select **Launch Streamlit UI** from the debug configuration dropdown. This will start the web dashboard using the project's virtual environment and automatically configure the `PYTHONPATH` to find the C++ src.
 
 ### Registering New Physics Modules
-When you add a new physics folder to `backend/physics/` (e.g., `wave_equation`), you must register it in the following files to enable VS Code selection:
+When you add a new physics folder to `src/physics/` (e.g., `wave_equation`), you must register it in the following files to enable VS Code selection:
 - `.vscode/tasks.json`: Add the name to the `options` list of the `selectedCase` input.
 - `.vscode/launch.json`: Add the name to the `options` list of the `selectedCase` input.
