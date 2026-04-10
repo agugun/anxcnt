@@ -8,8 +8,10 @@
 #include "lib/solvers.hpp"
 #include "lib/integrators.hpp"
 
-using namespace numerical_methods;
-using namespace numerical_methods::physics_pressure;
+using namespace num;
+using namespace mod;
+using namespace top;
+using namespace mod::physics_pressure;
 
 int main() {
     int nx = 50;

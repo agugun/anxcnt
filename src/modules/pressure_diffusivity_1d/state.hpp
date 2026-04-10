@@ -1,7 +1,8 @@
 #pragma once
-#include "lib/base.hpp"
+#include "lib/modules.hpp"
 
-namespace numerical_methods {
+namespace mod {
+using namespace top;
 namespace physics_pressure {
 
 class Pressure1DState : public IState {
@@ -26,4 +27,4 @@ public:
 };
 
 } // namespace physics_pressure
-} // namespace numerical_methods
+} // namespace mod

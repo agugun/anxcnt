@@ -1,10 +1,11 @@
 #pragma once
-#include "lib/base.hpp"
+#include "lib/modules.hpp"
 #include <stdexcept>
 #include <functional>
 #include <cmath>
 
-namespace numerical_methods {
+namespace num {
+using namespace top;
 
 /**
  * @brief LinearTridiagonalSolver implements the ISolver interface for 1D problems.
@@ -118,4 +119,4 @@ private:
     }
 };
 
-} // namespace numerical_methods
+} // namespace num

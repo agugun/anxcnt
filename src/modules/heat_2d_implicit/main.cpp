@@ -6,9 +6,12 @@
 #include "model.hpp"
 #include "lib/solvers.hpp"
 #include "lib/integrators.hpp"
+#include "lib/io.hpp"
 
-using namespace numerical_methods;
-using namespace numerical_methods::physics_heat;
+using namespace num;
+using namespace mod;
+using namespace top;
+using namespace mod::physics_heat;
 
 int main() {
     int nx = 61, ny = 61;
@@ -28,11 +31,18 @@ int main() {
     StandardSimulator sim(model, state, solver, integrator);
 
     std::cout << "Starting 2D Implicit Heat Simulation (Generic Simulator)\n";
+    std::cout << "Exporting results to exports/heat_2d_*.vtk\n";
 
-    auto grid_logger = [](double t, const IState& s) {
+    auto grid_logger = [nx, ny, dx, dy](double t, const IState& s) {
         static int step_count = 0;
+        const auto& h_state = dynamic_cast<const Heat2DState&>(s);
+
+        // Export VTI every step
+        char filename[100];
+        std::sprintf(filename, "exports/heat_2d_%03d.vti", step_count);
+        VTKExporter::export_vti_2d(filename, h_state.temperatures, nx, ny, dx, dy, "Temperature");
+
         if (step_count % 5 == 0) {
-            const auto& h_state = dynamic_cast<const Heat2DState&>(s);
             std::cout << "Time: " << std::fixed << std::setprecision(2) << t << "\n";
             
             // Print 10x10 subsample

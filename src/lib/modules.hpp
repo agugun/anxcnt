@@ -4,6 +4,8 @@
 #include <iostream>
 #include <functional>
 
+namespace top {
+
 // Placeholders for your actual math src 
 using Vector = std::vector<double>; 
 using Matrix = std::vector<std::vector<double>>; 
@@ -87,3 +89,5 @@ public:
         }
     }
 };
+
+} // namespace top

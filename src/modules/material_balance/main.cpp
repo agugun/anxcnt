@@ -7,8 +7,10 @@
 #include "model.hpp"
 #include "lib/integrators.hpp"
 
-using namespace numerical_methods;
-using namespace numerical_methods::physics_mba;
+using namespace num;
+using namespace mod;
+using namespace top;
+using namespace mod::physics_mba;
 
 int main() {
     double pi = 5000.0, N = 100e6, ct = 1e-5, q = 5000.0;

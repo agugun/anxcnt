@@ -1,9 +1,12 @@
 #pragma once
-#include "lib/base.hpp"
+#include "lib/modules.hpp"
 #include "lib/solvers.hpp"
 #include <stdexcept>
 
-namespace numerical_methods {
+namespace num {
+using namespace top;
+using namespace top;
+
 
 /**
  * @brief Forward Euler (Explicit) Integrator
@@ -100,4 +103,4 @@ private:
     }
 };
 
-} // namespace numerical_methods
+} // namespace num

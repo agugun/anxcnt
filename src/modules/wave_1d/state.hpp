@@ -1,7 +1,8 @@
 #pragma once
-#include "lib/base.hpp"
+#include "lib/modules.hpp"
 
-namespace numerical_methods {
+namespace mod {
+using namespace top;
 namespace physics_wave {
 
 class Wave1DState : public IState {
@@ -51,4 +52,4 @@ public:
 };
 
 } // namespace physics_wave
-} // namespace numerical_methods
+} // namespace mod

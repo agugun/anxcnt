@@ -1,9 +1,10 @@
 #pragma once
-#include "lib/base.hpp"
+#include "lib/modules.hpp"
 #include "state.hpp"
 #include "lib/operators.hpp"
 
-namespace numerical_methods {
+namespace mod {
+using namespace top;
 namespace physics_pressure {
 
 class Pressure1DModel : public IModel {
@@ -19,7 +20,7 @@ public:
 
     Vector evaluate_rhs(const IState& state) const override {
         const auto& p_state = dynamic_cast<const Pressure1DState&>(state);
-        Vector rhs = operators::laplace_1d(p_state.pressures, p_state.dx);
+        Vector rhs = mop::laplace_1d(p_state.pressures, p_state.dx);
         for (auto& v : rhs) v *= eta;
         return rhs;
     }
@@ -28,7 +29,7 @@ public:
         const auto& p_new = dynamic_cast<const Pressure1DState&>(s_new);
         const auto& p_old = dynamic_cast<const Pressure1DState&>(s_old);
         
-        Vector lap = operators::laplace_1d(p_new.pressures, p_new.dx);
+        Vector lap = mop::laplace_1d(p_new.pressures, p_new.dx);
         Vector r(p_new.pressures.size());
         for (size_t i = 0; i < r.size(); ++i) {
             r[i] = p_new.pressures[i] - p_old.pressures[i] - dt * eta * lap[i];
@@ -54,7 +55,11 @@ public:
         jac[n-1][n-1] = 1.0;
         return jac;
     }
+    void set_bcs(double left, double right) {
+        p_left = left;
+        p_right = right;
+    }
 };
 
 } // namespace physics_pressure
-} // namespace numerical_methods
+} // namespace mod

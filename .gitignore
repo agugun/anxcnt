@@ -1,7 +1,7 @@
-src/build
+dist/
 .venv/
-src/output/
-src/results/
+exports/
+results/
 __pycache__/
 *.py[cod]
 *$py.class

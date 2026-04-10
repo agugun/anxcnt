@@ -1,7 +1,8 @@
 #pragma once
-#include "lib/base.hpp"
+#include "lib/modules.hpp"
 
-namespace numerical_methods {
+namespace mod {
+using namespace top;
 namespace physics_heat {
 
 class Heat1DState : public IState {
@@ -30,4 +31,4 @@ public:
 };
 
 } // namespace physics_heat
-} // namespace numerical_methods
+} // namespace mod

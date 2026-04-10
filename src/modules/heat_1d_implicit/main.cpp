@@ -8,9 +8,12 @@
 #include "model.hpp"
 #include "lib/solvers.hpp"
 #include "lib/integrators.hpp"
+#include "lib/io.hpp"
 
-using namespace numerical_methods;
-using namespace numerical_methods::physics_heat;
+using namespace num;
+using namespace mod;
+using namespace top;
+using namespace mod::physics_heat;
 
 int main() {
     int nx = 101;
@@ -35,22 +38,27 @@ int main() {
     std::ofstream csv("exports/heat_results.csv");
     csv << "time,index,x,temp\n";
 
-    auto logger = [&csv](double t, const IState& s) {
+    auto logger = [&csv, nx, dx](double t, const IState& s) {
         static int step = 0;
         const auto& h_state = dynamic_cast<const Heat1DState&>(s);
         
+        // Export VTI every 5 steps
+        if (step % 5 == 0) {
+            char filename[100];
+            std::sprintf(filename, "exports/heat_1d_im_%03d.vti", step / 5);
+            VTKExporter::export_vti_1d(filename, h_state.temperatures, nx, dx, "Temperature");
+
+            for (size_t i = 0; i < h_state.temperatures.size(); ++i) {
+                csv << t << "," << i << "," << i * h_state.dx << "," << h_state.temperatures[i] << "\n";
+            }
+        }
+
         // Log to console every 20 steps
         if (step % 20 == 0) {
             std::cout << "Time: " << std::fixed << std::setprecision(3) << t 
                       << " | Center Temp: " << h_state.temperatures[h_state.temperatures.size() / 2] << "\n";
         }
         
-        // Log to CSV every 5 steps
-        if (step % 5 == 0) {
-            for (size_t i = 0; i < h_state.temperatures.size(); ++i) {
-                csv << t << "," << i << "," << i * h_state.dx << "," << h_state.temperatures[i] << "\n";
-            }
-        }
         step++;
     };
 

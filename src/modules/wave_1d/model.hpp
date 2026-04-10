@@ -1,9 +1,10 @@
 #pragma once
-#include "lib/base.hpp"
+#include "lib/modules.hpp"
 #include "state.hpp"
 #include "lib/operators.hpp"
 
-namespace numerical_methods {
+namespace mod {
+using namespace top;
 namespace physics_wave {
 
 class Wave1DModel : public IModel {
@@ -24,7 +25,7 @@ public:
         }
 
         // dv/dt = c^2 * L(u)
-        Vector lap = operators::laplace_1d(w_state.u, w_state.dx);
+        Vector lap = mop::laplace_1d(w_state.u, w_state.dx);
         double c2 = wave_speed * wave_speed;
         for (size_t i = 0; i < n; ++i) {
             rhs[n + i] = c2 * lap[i];
@@ -39,4 +40,4 @@ public:
 };
 
 } // namespace physics_wave
-} // namespace numerical_methods
+} // namespace mod

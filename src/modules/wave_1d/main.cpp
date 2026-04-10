@@ -8,8 +8,10 @@
 #include "model.hpp"
 #include "lib/integrators.hpp"
 
-using namespace numerical_methods;
-using namespace numerical_methods::physics_wave;
+using namespace num;
+using namespace mod;
+using namespace top;
+using namespace mod::physics_wave;
 
 int main() {
     int nx = 201;

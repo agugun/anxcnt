@@ -31,7 +31,7 @@ The following C++ features are exported to Python:
 
 ## Development Workflow
 
-1.  Modify numerical logic in `../../src/lib/numerical_methods/` or `../../src/physics/`.
+1.  Modify numerical logic in `../../src/lib/num/` or `../../src/physics/`.
 2.  Update `python_bridge.cpp` if you add new classes or methods.
 3.  Re-run the build command.
 4.  Verify in the Jupyter Notebook or Streamlit UI.

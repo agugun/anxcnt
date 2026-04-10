@@ -1,5 +1,9 @@
 #pragma once
-#include "lib/base.hpp"
+#include "lib/modules.hpp"
+
+namespace mod {
+using namespace top;
+namespace physics_heat {
 
 class HeatState : public IState {
 public:
@@ -19,3 +23,6 @@ public:
         return copy;
     }
 };
+
+} // namespace physics_heat
+} // namespace mod

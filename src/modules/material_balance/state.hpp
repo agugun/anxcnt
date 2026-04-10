@@ -1,7 +1,8 @@
 #pragma once
-#include "lib/base.hpp"
+#include "lib/modules.hpp"
 
-namespace numerical_methods {
+namespace mod {
+using namespace top;
 namespace physics_mba {
 
 class MBState : public IState {
@@ -21,4 +22,4 @@ public:
 };
 
 } // namespace physics_mba
-} // namespace numerical_methods
+} // namespace mod

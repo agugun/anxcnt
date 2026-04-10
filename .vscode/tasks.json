@@ -10,7 +10,7 @@
                 "PHYSICS=${input:selectedPhysics}"
             ],
             "options": {
-                "cwd": "${workspaceFolder}/src"
+                "cwd": "${workspaceFolder}"
             },
             "group": {
                 "kind": "build",
@@ -28,7 +28,7 @@
                 "clean"
             ],
             "options": {
-                "cwd": "${workspaceFolder}/src"
+                "cwd": "${workspaceFolder}"
             }
         }
     ],

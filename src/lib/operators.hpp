@@ -2,8 +2,9 @@
 #include <vector>
 #include <functional>
 
-namespace numerical_methods {
-namespace operators {
+namespace mop {
+using namespace top;
+
 
 using Vector = std::vector<double>;
 
@@ -49,5 +50,28 @@ inline Vector grad_1d(const Vector& u, double dx) {
     return res;
 }
 
-} // namespace operators
-} // namespace numerical_methods
+// 3D 7-point Stencil Laplacian
+inline Vector laplace_3d(const Vector& u, int nx, int ny, int nz, double dx, double dy, double dz) {
+    Vector res(u.size(), 0.0);
+    double inv_dx2 = 1.0 / (dx * dx);
+    double inv_dy2 = 1.0 / (dy * dy);
+    double inv_dz2 = 1.0 / (dz * dz);
+
+    auto idx = [nx, ny](int i, int j, int k) { 
+        return (k * ny + j) * nx + i; 
+    };
+
+    for (int k = 1; k < nz - 1; ++k) {
+        for (int j = 1; j < ny - 1; ++j) {
+            for (int i = 1; i < nx - 1; ++i) {
+                double d2u_dx2 = (u[idx(i + 1, j, k)] - 2.0 * u[idx(i, j, k)] + u[idx(i - 1, j, k)]) * inv_dx2;
+                double d2u_dy2 = (u[idx(i, j + 1, k)] - 2.0 * u[idx(i, j, k)] + u[idx(i, j - 1, k)]) * inv_dy2;
+                double d2u_dz2 = (u[idx(i, j, k + 1)] - 2.0 * u[idx(i, j, k)] + u[idx(i, j, k - 1)]) * inv_dz2;
+                res[idx(i, j, k)] = d2u_dx2 + d2u_dy2 + d2u_dz2;
+            }
+        }
+    }
+    return res;
+}
+
+} // namespace mop

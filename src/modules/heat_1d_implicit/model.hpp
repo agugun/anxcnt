@@ -1,9 +1,10 @@
 #pragma once
-#include "lib/base.hpp"
+#include "lib/modules.hpp"
 #include "state.hpp"
 #include "lib/operators.hpp"
-
-namespace numerical_methods {
+ 
+namespace mod {
+using namespace top;
 namespace physics_heat {
 
 class Heat1DModel : public IModel {
@@ -17,14 +18,14 @@ public:
 
     Vector evaluate_rhs(const IState& state) const override {
         const auto& h_state = dynamic_cast<const Heat1DState&>(state);
-        Vector rhs = operators::laplace_1d(h_state.temperatures, h_state.dx);
+        Vector rhs = mop::laplace_1d(h_state.temperatures, h_state.dx);
         for (auto& v : rhs) v *= alpha;
         return rhs;
     }
 
     Vector apply_jacobian(const IState& state, const Vector& v, double dt) const override {
         const auto& h_state = dynamic_cast<const Heat1DState&>(state);
-        Vector Jv = operators::laplace_1d(v, h_state.dx);
+        Vector Jv = mop::laplace_1d(v, h_state.dx);
         // Implicit Euler Jacobian application: (I - dt * J) v
         Vector res(v.size());
         for (size_t i = 1; i < v.size() - 1; ++i) {
@@ -39,7 +40,7 @@ public:
         const auto& h_new = dynamic_cast<const Heat1DState&>(s_new);
         const auto& h_old = dynamic_cast<const Heat1DState&>(s_old);
         
-        Vector lap = operators::laplace_1d(h_new.temperatures, h_new.dx);
+        Vector lap = mop::laplace_1d(h_new.temperatures, h_new.dx);
         Vector r(h_new.temperatures.size());
         for (size_t i = 1; i < r.size() - 1; ++i) {
             r[i] = h_new.temperatures[i] - h_old.temperatures[i] - dt * alpha * lap[i];
@@ -73,4 +74,4 @@ public:
 };
 
 } // namespace physics_heat
-} // namespace numerical_methods
+} // namespace mod

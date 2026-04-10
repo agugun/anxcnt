@@ -5,15 +5,15 @@ namespace mod {
 using namespace top;
 namespace physics_heat {
 
-class Heat2DState : public IState {
+class Heat3DState : public IState {
 public:
     Vector temperatures;
-    int nx, ny;
-    double dx, dy;
+    int nx, ny, nz;
+    double dx, dy, dz;
 
-    Heat2DState(int nx, int ny, double dx, double dy, double initial_temp = 0.0) 
-        : nx(nx), ny(ny), dx(dx), dy(dy) {
-        temperatures.resize(nx * ny, initial_temp);
+    Heat3DState(int nx, int ny, int nz, double dx, double dy, double dz, double initial_temp = 0.0) 
+        : nx(nx), ny(ny), nz(nz), dx(dx), dy(dy), dz(dz) {
+        temperatures.resize(nx * ny * nz, initial_temp);
     }
 
     void update(const Vector& delta) override {
@@ -23,14 +23,14 @@ public:
     }
 
     std::unique_ptr<IState> clone() const override {
-        auto copy = std::make_unique<Heat2DState>(nx, ny, dx, dy, 0.0);
+        auto copy = std::make_unique<Heat3DState>(nx, ny, nz, dx, dy, dz, 0.0);
         copy->temperatures = this->temperatures;
         return copy;
     }
 
     // Helper to get index
-    int idx(int i, int j) const {
-        return j * nx + i;
+    int idx(int i, int j, int k) const {
+        return (k * ny + j) * nx + i;
     }
 };
 

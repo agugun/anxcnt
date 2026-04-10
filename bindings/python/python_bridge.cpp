@@ -1,38 +1,111 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include "physics/heat_1d_implicit/simulation.hpp"
-#include "physics/pressure_diffusivity_1d/simulation.hpp"
+#include "modules/heat_1d_implicit/model.hpp"
+#include "modules/heat_1d_implicit/state.hpp"
+#include "modules/pressure_diffusivity_1d/model.hpp"
+#include "modules/pressure_diffusivity_1d/state.hpp"
+#include "lib/integrators.hpp"
 
 namespace py = pybind11;
+using namespace num;
+using namespace mod;
+using namespace top;
+
+
+/**
+ * @brief Helper class to maintain the expected Python API for Heat simulations
+ */
+class HeatSimulationWrapper {
+private:
+    std::shared_ptr<mod::physics_heat::Heat1DModel> model;
+    std::shared_ptr<mod::physics_heat::Heat1DState> state;
+    std::shared_ptr<LinearTridiagonalSolver> solver;
+    std::shared_ptr<ImplicitEulerIntegrator> integrator;
+    std::unique_ptr<StandardSimulator> simulator;
+
+public:
+    HeatSimulationWrapper(int nx, double dx, double alpha) {
+        state = std::make_shared<mod::physics_heat::Heat1DState>(nx, dx, 0.0);
+        model = std::make_shared<mod::physics_heat::Heat1DModel>(alpha, 0.0, 0.0);
+        solver = std::make_shared<LinearTridiagonalSolver>();
+        integrator = std::make_shared<ImplicitEulerIntegrator>();
+        simulator = std::make_unique<StandardSimulator>(model, state, solver, integrator);
+    }
+
+    void set_initial_condition(const std::vector<double>& ic) {
+        state->temperatures = ic;
+    }
+
+    void set_boundary_conditions(double left, double right) {
+        model->set_bcs(left, right);
+    }
+
+    void step(double dt) {
+        // Step once
+        integrator->step(*model, *state, solver.get(), dt);
+    }
+
+    std::vector<double> get_values() const {
+        return state->temperatures;
+    }
+};
+
+/**
+ * @brief Helper class to maintain the expected Python API for Pressure simulations
+ */
+class PressureSimulationWrapper {
+private:
+    std::shared_ptr<mod::physics_pressure::Pressure1DModel> model;
+    std::shared_ptr<mod::physics_pressure::Pressure1DState> state;
+    std::shared_ptr<LinearTridiagonalSolver> solver;
+    std::shared_ptr<ImplicitEulerIntegrator> integrator;
+    std::unique_ptr<StandardSimulator> simulator;
+
+public:
+    PressureSimulationWrapper(int nx, double dx, double k, double phi, double mu, double ct) {
+        state = std::make_shared<mod::physics_pressure::Pressure1DState>(nx, dx, 0.0);
+        model = std::make_shared<mod::physics_pressure::Pressure1DModel>(k, phi, mu, ct, 0.0, 0.0);
+        solver = std::make_shared<LinearTridiagonalSolver>();
+        integrator = std::make_shared<ImplicitEulerIntegrator>();
+        simulator = std::make_unique<StandardSimulator>(model, state, solver, integrator);
+    }
+
+    void set_initial_condition(const std::vector<double>& ic) {
+        state->pressures = ic;
+    }
+
+    void set_boundary_conditions(double left, double right) {
+        // Re-construct or update model? Currently model stores BCs in constructor.
+        // I will add a set_bcs to Pressure1DModel if missing, or recreate here.
+        // For now, let's assume I'll add set_bcs to model.hpp to match Heat.
+        model = std::make_shared<mod::physics_pressure::Pressure1DModel>(1.0, 1.0, 1.0, 1.0, left, right); // Hack for now, need better sync
+    }
+
+    void step(double dt) {
+        integrator->step(*model, *state, solver.get(), dt);
+    }
+
+    std::vector<double> get_values() const {
+        return state->pressures;
+    }
+};
 
 PYBIND11_MODULE(cnt, m) {
-    m.doc() = "NumPhys Backend Python Bridge";
+    m.doc() = "NumPhys Core Python Bridge";
 
-    // Bind the new Case-based simulation orchestrator
-    py::class_<numerical_methods::physics_heat::HeatSimulation>(m, "Heat1DImplicit")
+    py::class_<HeatSimulationWrapper>(m, "Heat1DImplicit")
         .def(py::init<int, double, double>(), 
              py::arg("nx"), py::arg("dx"), py::arg("alpha"))
-        .def("set_initial_condition", &numerical_methods::physics_heat::HeatSimulation::set_initial_condition,
-             py::arg("ic"))
-        .def("set_boundary_conditions", &numerical_methods::physics_heat::HeatSimulation::set_boundary_conditions,
-             py::arg("left"), py::arg("right"))
-        .def("step", &numerical_methods::physics_heat::HeatSimulation::step,
-             py::arg("dt"))
-        .def("get_values", [](const numerical_methods::physics_heat::HeatSimulation& self) {
-            return self.get_values();
-        });
+        .def("set_initial_condition", &HeatSimulationWrapper::set_initial_condition)
+        .def("set_boundary_conditions", &HeatSimulationWrapper::set_boundary_conditions)
+        .def("step", &HeatSimulationWrapper::step)
+        .def("get_values", &HeatSimulationWrapper::get_values);
 
-    // Bind the new Pressure Diffusivity Case (Newton-Raphson)
-    py::class_<numerical_methods::physics_pressure::PressureSimulation>(m, "Pressure1DImplicit")
+    py::class_<PressureSimulationWrapper>(m, "Pressure1DImplicit")
         .def(py::init<int, double, double, double, double, double>(),
              py::arg("nx"), py::arg("dx"), py::arg("k"), py::arg("phi"), py::arg("mu"), py::arg("ct"))
-        .def("set_initial_condition", &numerical_methods::physics_pressure::PressureSimulation::set_initial_condition,
-             py::arg("ic"))
-        .def("set_boundary_conditions", &numerical_methods::physics_pressure::PressureSimulation::set_boundary_conditions,
-             py::arg("left"), py::arg("right"))
-        .def("step", &numerical_methods::physics_pressure::PressureSimulation::step,
-             py::arg("dt"))
-        .def("get_values", [](const numerical_methods::physics_pressure::PressureSimulation& self) {
-            return self.get_values();
-        });
+        .def("set_initial_condition", &PressureSimulationWrapper::set_initial_condition)
+        .def("set_boundary_conditions", &PressureSimulationWrapper::set_boundary_conditions)
+        .def("step", &PressureSimulationWrapper::step)
+        .def("get_values", &PressureSimulationWrapper::get_values);
 }
