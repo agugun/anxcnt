@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -24,7 +25,8 @@ public:
     
     ReservoirWellBlackOil2D(int i_v, int j_v, double q) : i(i_v), j(j_v), q_total(q) {}
 
-    void apply(Vector& residual, Matrix* jacobian, const top::IState& state, double dt) override {
+    void apply(Vector& residual, Matrix* jacobian, const top::IState& state, double dt,
+               std::vector<num::SparseMatrix::Entry>* sparse_entries = nullptr) override {
         const auto& b_state = dynamic_cast<const ReservoirBlackOil2DState&>(state);
         int c = b_state.idx(i, j);
         
@@ -44,6 +46,8 @@ int main(int argc, char** argv) {
 
     ConfigReader config;
     config.load(config_file);
+    int num_threads = config.get("num_threads", 1);
+    omp_set_num_threads(num_threads);
 
     bool enable_vtk = config.get("enable_vtk", 0) != 0;
     bool enable_csv = config.get("enable_csv", 0) != 0;

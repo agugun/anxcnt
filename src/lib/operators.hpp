@@ -39,8 +39,10 @@ public:
      * @param jacobian Pointer to jacobian matrix (can be nullptr)
      * @param state Current state of the field
      * @param dt Time step
+     * @param sparse_entries Optional: support for sparse collection
      */
-    virtual void apply(Vector& residual, Matrix* jacobian, const top::IState& state, double dt) = 0;
+    virtual void apply(Vector& residual, Matrix* jacobian, const top::IState& state, double dt, 
+                       std::vector<SparseMatrix::Entry>* sparse_entries = nullptr) = 0;
 };
 
 } // namespace top
@@ -62,7 +64,8 @@ inline Vector laplace_1d(const Vector& u, double dx) {
     Vector res(n, 0.0);
     double inv_dx2 = 1.0 / (dx * dx);
 
-    for (size_t i = 1; i < n - 1; ++i) {
+    #pragma omp parallel for
+    for (int i = 1; i < (int)n - 1; ++i) {
         res[i] = (u[i+1] - 2.0 * u[i] + u[i-1]) * inv_dx2;
     }
     return res;
@@ -81,6 +84,7 @@ inline Vector laplace_2d(const Vector& u, int nx, int ny, double dx, double dy) 
 
     auto idx = [nx](int i, int j) { return j * nx + i; };
 
+    #pragma omp parallel for collapse(2)
     for (int j = 1; j < ny - 1; ++j) {
         for (int i = 1; i < nx - 1; ++i) {
             double d2u_dx2 = (u[idx(i + 1, j)] - 2.0 * u[idx(i, j)] + u[idx(i - 1, j)]) * inv_dx2;
@@ -99,7 +103,8 @@ inline Vector grad_1d(const Vector& u, double dx) {
     Vector res(n, 0.0);
     double inv_2dx = 1.0 / (2.0 * dx);
 
-    for (size_t i = 1; i < n - 1; ++i) {
+    #pragma omp parallel for
+    for (int i = 1; i < (int)n - 1; ++i) {
         res[i] = (u[i+1] - u[i-1]) * inv_2dx;
     }
     return res;
@@ -121,6 +126,7 @@ inline Vector laplace_3d(const Vector& u, int nx, int ny, int nz, double dx, dou
         return (k * ny + j) * nx + i; 
     };
 
+    #pragma omp parallel for collapse(3)
     for (int k = 1; k < nz - 1; ++k) {
         for (int j = 1; j < ny - 1; ++j) {
             for (int i = 1; i < nx - 1; ++i) {

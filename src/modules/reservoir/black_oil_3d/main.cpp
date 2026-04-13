@@ -1,9 +1,12 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <omp.h>
 #include <fstream>
 #include <iomanip>
 #include "state.hpp"
+#include "model.hpp"
+#include "modules/reservoir/pvt.hpp"
 #include "model.hpp"
 #include "lib/solvers.hpp"
 #include "lib/integrators.hpp"
@@ -29,6 +32,11 @@ int main(int argc, char** argv) {
     ConfigReader config;
     config.load(config_file);
 
+    int num_threads = config.get("num_threads", 1);
+    omp_set_num_threads(num_threads);
+
+    bool enable_vtk = config.get("enable_vtk", 0) != 0;
+
     std::cout << "--- Initiating 3D Black Oil Simulation ---\n";
 
     // 1. Grid Definition
@@ -38,6 +46,8 @@ int main(int argc, char** argv) {
     double dx = config.get("dx", 100.0);
     double dy = config.get("dy", 100.0);
     double dz = config.get("dz", 20.0);
+    double k_abs = config.get("k_abs", 100.0);
+    double phi = config.get("phi", 0.2);
     Spatial3D spatial(nx, ny, nz, dx, dy, dz);
 
     // 2. Initial State
@@ -64,16 +74,25 @@ int main(int argc, char** argv) {
         return state->sg(c);
     };
 
+    BlackOilPVT pvt_instance;
+    double p_init = 2000.0;
+    double rs_init = pvt_instance.get_rs(p_init);
+    double mw = pvt_instance.get_mu_w(p_init);
+    double mo = pvt_instance.get_mu_o(p_init, rs_init);
+    double mg = pvt_instance.get_mu_g(p_init);
+
     std::vector<std::shared_ptr<ISourceSink>> sources;
     // Water Injector at (0,0) through all layers
     sources.push_back(std::make_shared<ReservoirWellBlackOil3D>(0, 0, 0, nz - 1, 500.0, true, 
-                                                               rel_perm_wrapper, idx_wrapper, var_accessor));
+                                                               rel_perm_wrapper, idx_wrapper, var_accessor,
+                                                               mw, mo, mg));
     // Producer at (nx-1, ny-1) through all layers
     sources.push_back(std::make_shared<ReservoirWellBlackOil3D>(nx - 1, ny - 1, 0, nz - 1, 500.0, false, 
-                                                               rel_perm_wrapper, idx_wrapper, var_accessor));
+                                                               rel_perm_wrapper, idx_wrapper, var_accessor,
+                                                               mw, mo, mg));
 
     // 4. Model & Solvers
-    auto model = std::make_shared<ReservoirBlackOil3DModel>(100.0, 0.2, sources);
+    auto model = std::make_shared<ReservoirBlackOil3DModel>(k_abs, phi, sources);
     auto solver = std::make_shared<NewtonSolver>();
     auto integrator = std::make_shared<FullyImplicitIntegrator>();
 

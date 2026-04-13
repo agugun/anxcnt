@@ -249,7 +249,8 @@ public:
         for (int iter = 0; iter < max_iter; ++iter) {
             Vector R = model.build_residual(state, *state_old, dt);
             double norm = 0; 
-            for (double r : R) norm += r * r;
+            #pragma omp parallel for reduction(+:norm)
+            for (int i = 0; i < (int)R.size(); ++i) norm += R[i] * R[i];
             norm = std::sqrt(norm);
             
             if (iter == 0) total_delta = Vector(R.size(), 0.0);
@@ -260,7 +261,7 @@ public:
             
             if (S.rows > 0) {
                 // High-performance Sparse Solve
-                delta = BiCGSTABSolver::solve(S, scale(R, -1.0), 1e-8, 1000, true);
+                delta = BiCGSTABSolver::solve(S, scale_parallel(R, -1.0), 1e-8, 1000, true);
             } else {
                 // Legacy Dense Solve (Slow)
                 Matrix J = model.build_jacobian(state, dt);
@@ -274,17 +275,19 @@ public:
 
             for (int ls = 0; ls < 6; ++ls) {
                 auto state_trial = state.clone();
-                state_trial->update(scale(delta, omega));
+                state_trial->update(scale_parallel(delta, omega));
                 
                 Vector R_trial = model.build_residual(*state_trial, *state_old, dt);
                 double norm_trial = 0;
-                for (double r : R_trial) norm_trial += r * r;
+                #pragma omp parallel for reduction(+:norm_trial)
+                for (int i = 0; i < (int)R_trial.size(); ++i) norm_trial += R_trial[i] * R_trial[i];
                 norm_trial = std::sqrt(norm_trial);
                 
                 if (norm_trial < norm_initial * 0.999) { 
-                    Vector step = scale(delta, omega);
+                    Vector step = scale_parallel(delta, omega);
                     state.update(step);
-                    for (size_t i = 0; i < total_delta.size(); i++) total_delta[i] += step[i];
+                    #pragma omp parallel for
+                    for (int i = 0; i < (int)total_delta.size(); i++) total_delta[i] += step[i];
                     norm = norm_trial;
                     descent_found = true;
                     break;
@@ -293,9 +296,10 @@ public:
             }
 
             if (!descent_found) {
-                Vector step = scale(delta, 0.001);
+                Vector step = scale_parallel(delta, 0.001);
                 state.update(step);
-                for (size_t i = 0; i < total_delta.size(); i++) total_delta[i] += step[i];
+                #pragma omp parallel for
+                for (int i = 0; i < (int)total_delta.size(); i++) total_delta[i] += step[i];
             }
             
             std::cout << "  Iter " << iter << ": Norm = " << norm << " (Omega = " << omega << ")" << std::endl;
@@ -304,6 +308,13 @@ public:
     }
 
 private:
+    static Vector scale_parallel(const Vector& v, double s) {
+        Vector res = v;
+        #pragma omp parallel for
+        for (int i = 0; i < (int)res.size(); ++i) res[i] *= s;
+        return res;
+    }
+
     static Vector scale(const Vector& v, double s) {
         Vector res = v;
         for (double& x : res) x *= s;

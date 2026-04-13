@@ -56,11 +56,12 @@ public:
 
     Vector evaluate_rhs(const IState& state) const override {
         const auto& r_state = dynamic_cast<const Reservoir2DState&>(state);
-        Vector rhs = mop::laplace_2d(r_state.pressures, r_state.spatial.dx, r_state.spatial.dy, r_state.spatial.nx, r_state.spatial.ny);
-        for (auto& v : rhs) v *= diffusivity;
+        Vector rhs = mop::laplace_2d(r_state.pressures, r_state.spatial.nx, r_state.spatial.ny, r_state.spatial.dx, r_state.spatial.dy);
+        #pragma omp parallel for
+        for (int i = 0; i < (int)rhs.size(); ++i) rhs[i] *= diffusivity;
 
         for (auto& s : sources) {
-            s->apply(rhs, nullptr, r_state, 0.0);
+            s->apply(rhs, nullptr, r_state, 0.0, nullptr);
         }
 
         return rhs;
@@ -76,6 +77,7 @@ public:
         double tx = diffusivity * dt / (dx * dx);
         double ty = diffusivity * dt / (dy * dy);
 
+        #pragma omp parallel for collapse(2)
         for (int j = 0; j < ny; ++j) {
             for (int i = 0; i < nx; ++i) {
                 int cur = r_new.idx(i, j);
@@ -96,14 +98,15 @@ public:
         for (auto& s : sources) {
             s->apply(well_contributions, nullptr, r_new, dt);
         }
-        for (size_t i = 0; i < res.size(); ++i) {
+        #pragma omp parallel for
+        for (int i = 0; i < (int)res.size(); ++i) {
             res[i] += dt * well_contributions[i];
         }
 
         return res;
     }
 
-    Matrix build_jacobian(const IState& state, double dt) const override {
+    SparseMatrix build_sparse_jacobian(const IState& state, double dt) const override {
         const auto& r_state = dynamic_cast<const Reservoir2DState&>(state);
         int nx = r_state.spatial.nx, ny = r_state.spatial.ny;
         double dx = r_state.spatial.dx, dy = r_state.spatial.dy;
@@ -112,27 +115,50 @@ public:
         double tx = diffusivity * dt / (dx * dx);
         double ty = diffusivity * dt / (dy * dy);
 
-        Matrix jac(n, Vector(n, 0.0));
-        for (int j = 0; j < ny; ++j) {
-            for (int i = 0; i < nx; ++i) {
-                int cur = r_state.idx(i, j);
-                
-                jac[cur][cur] = 1.0 + 2.0 * tx + 2.0 * ty;
-                
-                if (i > 0) jac[cur][r_state.idx(i-1, j)] = -tx;
-                else jac[cur][cur] -= tx;
-                
-                if (i < nx - 1) jac[cur][r_state.idx(i+1, j)] = -tx;
-                else jac[cur][cur] -= tx;
-                
-                if (j > 0) jac[cur][r_state.idx(i, j-1)] = -ty;
-                else jac[cur][cur] -= ty;
-                
-                if (j < ny - 1) jac[cur][r_state.idx(i, j+1)] = -ty;
-                else jac[cur][cur] -= ty;
+        std::vector<SparseMatrix::Entry> entries;
+        #pragma omp parallel
+        {
+            std::vector<SparseMatrix::Entry> local_entries;
+            #pragma omp for
+            for (int j = 0; j < ny; ++j) {
+                for (int i = 0; i < nx; ++i) {
+                    int cur = r_state.idx(i, j);
+                    local_entries.push_back({cur, cur, 1.0 + 2.0 * tx + 2.0 * ty});
+                    
+                    if (i > 0) local_entries.push_back(SparseMatrix::Entry{cur, r_state.idx(i-1, j), -tx});
+                    else local_entries.back().v -= tx;
+                    
+                    if (i < nx - 1) local_entries.push_back(SparseMatrix::Entry{cur, r_state.idx(i+1, j), -tx});
+                    else local_entries.back().v -= tx;
+                    
+                    if (j > 0) local_entries.push_back(SparseMatrix::Entry{cur, r_state.idx(i, j-1), -ty});
+                    else local_entries.back().v -= ty;
+                    
+                    if (j < ny - 1) local_entries.push_back(SparseMatrix::Entry{cur, r_state.idx(i, j+1), -ty});
+                    else local_entries.back().v -= ty;
+                }
+            }
+            #pragma omp critical
+            {
+                entries.insert(entries.end(), local_entries.begin(), local_entries.end());
             }
         }
-        return jac;
+        Vector dummy_res(n, 0.0);
+        for (auto& s : sources) {
+            s->apply(dummy_res, nullptr, r_state, dt, &entries);
+        }
+        return SparseMatrix::from_triplets(n, n, entries);
+    }
+
+    Matrix build_jacobian(const IState& state, double dt) const override {
+        SparseMatrix S = build_sparse_jacobian(state, dt);
+        Matrix J(S.rows, Vector(S.cols, 0.0));
+        for (int i = 0; i < S.rows; ++i) {
+            for (int k = S.row_ptr[i]; k < S.row_ptr[i + 1]; ++k) {
+                J[i][S.col_indices[k]] = S.values[k];
+            }
+        }
+        return J;
     }
 
     Vector apply_jacobian(const IState& state, const Vector& v, double dt) const override {
@@ -146,6 +172,7 @@ public:
         double tx = diffusivity * dt / (dx * dx);
         double ty = diffusivity * dt / (dy * dy);
 
+        #pragma omp parallel for collapse(2)
         for (int j = 0; j < ny; ++j) {
             for (int i = 0; i < nx; ++i) {
                 int cur = r_state.idx(i, j);

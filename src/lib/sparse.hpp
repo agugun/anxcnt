@@ -91,10 +91,13 @@ public:
             throw std::runtime_error("SparseMatrix::multiply dimension mismatch.");
         }
         std::vector<double> y(rows, 0.0);
+        #pragma omp parallel for
         for (int i = 0; i < rows; ++i) {
+            double sum = 0;
             for (int k = row_ptr[i]; k < row_ptr[i + 1]; ++k) {
-                y[i] += values[k] * x[col_indices[k]];
+                sum += values[k] * x[col_indices[k]];
             }
+            y[i] = sum;
         }
         return y;
     }

@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <iostream>
 #include <vector>
 #include <memory>
@@ -24,7 +25,9 @@ int main(int argc, char** argv) {
   }
 
   ConfigReader config;
-  config.load(config_file);
+    config.load(config_file);
+    int num_threads = config.get("num_threads", 1);
+    omp_set_num_threads(num_threads);
 
   bool enable_vtk = config.get("enable_vtk", 0) != 0;
   for (int i = 1; i < argc; ++i) {

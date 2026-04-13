@@ -12,3 +12,4 @@ __pycache__/
 .vscode/tasks.json
 bindings/python/build/
 
+*.log

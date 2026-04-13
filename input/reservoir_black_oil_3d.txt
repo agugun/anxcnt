@@ -1,12 +1,10 @@
 # Black Oil 3D Simulation Parameters
 nx = 10
 ny = 10
-nz = 3
-dx = 100.0
-dy = 100.0
-dz = 20.0
+nz = 10
+num_threads = 6
 k = 100.0
 phi = 0.2
-q_rate = 500.0
-dt = 0.1
-steps = 50
+t_end = 24.0
+dt = 0.5
+enable_vtk = 0

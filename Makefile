@@ -10,7 +10,7 @@ PYTHON_VENV = .venv/bin/python
 
 # Compiler
 CXX = g++
-CXX_FLAGS = -std=c++14 -O3 -I$(SRC_DIR)
+CXX_FLAGS = -std=c++14 -O3 -fopenmp -I$(SRC_DIR)
 
 # Targets
 .PHONY: all mod bindings clean mod_clean bindings_clean heat_1d_implicit pressure_sim heat_1d_explicit wave heat_2d_implicit heat_3d_implicit mba reservoir_1d reservoir_2d reservoir_3d reservoir_dual_2d reservoir_oil_gas_2d reservoir_black_oil_2d reservoir_black_oil_3d python_inplace build_physics
@@ -114,6 +114,14 @@ test_integrators: build_test_integrators
 	./$(BUILD_DIR)/verify_integrators
 
 test: test_math test_solvers test_integrators
+
+build_benchmark: $(BUILD_DIR)
+	@echo "Building Solver Performance Benchmark..."
+	$(CXX) $(CXX_FLAGS) benchmark/benchmark_solvers.cpp -o $(BUILD_DIR)/benchmark_solvers
+
+benchmark: build_benchmark
+	@echo "Running Solver Performance Benchmarks..."
+	./$(BUILD_DIR)/benchmark_solvers
 
 clean: mod_clean bindings_clean
 

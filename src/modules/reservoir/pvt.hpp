@@ -73,6 +73,12 @@ public:
         return 1.0 / (1.0 + cw * (p - 14.7));
     }
 
+    double get_dbw_dp(double p) const {
+        double cw = 3.0e-6;
+        double bw = get_bw(p);
+        return -cw * (bw * bw);
+    }
+
     // --- Viscosities [cP] ---
     double get_mu_o(double p, double rs) const {
         // Simple dead oil viscosity + saturation adjustment
