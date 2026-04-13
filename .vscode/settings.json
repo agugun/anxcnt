@@ -62,8 +62,8 @@
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "makefile.launchConfigurations": [
     {
-      "cwd": "/home/gugun/repo/axscnt/src/build",
-      "binaryPath": "/home/gugun/repo/axscnt/src/build/heat_sim",
+      "cwd": "${workspaceFolder}/dist",
+      "binaryPath": "${workspaceFolder}/dist/heat_1d_implicit",
       "binaryArgs": []
     }
   ]

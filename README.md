@@ -20,7 +20,7 @@ Follow these step-by-step instructions to set up the Python environment for the 
 Navigate to the root directory of the project in your terminal, and create a virtual environment:
 
 ```bash
-python -m venv venv
+python -m venv .venv
 ```
 
 ### 3. Activate the Environment
@@ -54,14 +54,11 @@ jupyter notebook
 
 The src uses a unified build system via a **Makefile**. To compile the Python bridge and the standalone C++ executables:
 
-```bash
-cd src
 make all
-```
 
-This will create a `src/build/` directory containing:
-- `cnt.so`: The Python interface module.
-- `heat_sim`: A standalone C++ executable for the 1D Heat Equation.
+This will create a `dist/` directory for C++ executables and build the Python bridge:
+- `bindings/python/cnt.so`: The Python interface module.
+- `dist/heat_1d_implicit`: A standalone C++ executable for the 1D Heat Equation.
 
 To clean the build artifacts, use:
 ```bash

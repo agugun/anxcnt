@@ -1,0 +1,7 @@
+# Wave 1D Simulation Parameters
+nx = 100
+dx = 0.1
+c = 1.0
+t_end = 10.0
+dt = 0.01
+enable_csv = 0

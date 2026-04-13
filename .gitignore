@@ -1,7 +1,6 @@
 dist/
 .venv/
 exports/
-results/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -11,4 +10,5 @@ __pycache__/
 .DS_Store
 .vscode/launch.json
 .vscode/tasks.json
+bindings/python/build/
 

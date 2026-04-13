@@ -1,0 +1,7 @@
+# Heat 1D Implicit Simulation Parameters
+nx = 100
+alpha = 0.1
+dt = 0.01
+t_end = 2.0
+enable_vtk = 0
+enable_csv = 0

@@ -5,7 +5,7 @@
             "name": "Debug Simulation Physics",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/src/build/${input:selectedPhysics}",
+            "program": "${workspaceFolder}/dist/${input:selectedPhysics}",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/src",
@@ -34,7 +34,7 @@
             "cwd": "${workspaceFolder}/ui",
             "python": "${workspaceFolder}/.venv/bin/python",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/src/build"
+                "PYTHONPATH": "${workspaceFolder}/bindings/python"
             },
             "console": "integratedTerminal"
         }
@@ -45,11 +45,21 @@
             "type": "pickString",
             "description": "Select the simulation physics module to build/debug",
             "options": [
-                "heat_1d_implicit",
-                "pressure_diffusivity_1d",
-                "base"
+                "heat/1d_implicit",
+                "heat/1d_explicit",
+                "heat/2d_implicit",
+                "heat/3d_implicit",
+                "reservoir/1d",
+                "reservoir/2d",
+                "reservoir/3d",
+                "reservoir/black_oil_2d",
+                "reservoir/dual_2d",
+                "reservoir/oil_gas_2d",
+                "reservoir/mba",
+                "pressure/1d",
+                "wave/1d"
             ],
-            "default": "base"
+            "default": "reservoir/2d"
         }
     ]
 }

@@ -1,0 +1,12 @@
+# Pressure 1D Simulation Parameters
+nx = 50
+dx = 20.0
+k = 50.0
+phi = 0.25
+mu = 2.0
+ct = 1e-5
+p_left = 1500.0
+p_right = 3000.0
+t_end = 2400.0
+dt = 24.0
+enable_csv = 0

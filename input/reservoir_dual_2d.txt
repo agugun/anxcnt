@@ -1,0 +1,17 @@
+# Reservoir Dual-Phase 2D Simulation Parameters
+nx = 20
+ny = 20
+total_x = 2000.0
+total_y = 2000.0
+h = 50.0
+k = 200.0
+phi = 0.2
+mu_w = 1.0
+mu_o = 5.0
+initial_p = 1000.0
+sw_res = 0.2
+q_injector = 500.0
+q_producer = 500.0
+dt = 12.0
+t_end = 4800.0
+enable_vtk = 0

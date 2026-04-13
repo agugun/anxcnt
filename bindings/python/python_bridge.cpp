@@ -1,10 +1,11 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include "modules/heat_1d_implicit/model.hpp"
-#include "modules/heat_1d_implicit/state.hpp"
-#include "modules/pressure_diffusivity_1d/model.hpp"
-#include "modules/pressure_diffusivity_1d/state.hpp"
+#include "modules/heat/1d_implicit/model.hpp"
+#include "modules/heat/1d_implicit/state.hpp"
+#include "modules/pressure/1d/model.hpp"
+#include "modules/pressure/1d/state.hpp"
 #include "lib/integrators.hpp"
+#include "lib/spatial.hpp"
 
 namespace py = pybind11;
 using namespace num;
@@ -17,16 +18,17 @@ using namespace top;
  */
 class HeatSimulationWrapper {
 private:
-    std::shared_ptr<mod::physics_heat::Heat1DModel> model;
-    std::shared_ptr<mod::physics_heat::Heat1DState> state;
+    std::shared_ptr<mod::heat::Heat1DModel> model;
+    std::shared_ptr<mod::heat::Heat1DImplicitState> state;
     std::shared_ptr<LinearTridiagonalSolver> solver;
     std::shared_ptr<ImplicitEulerIntegrator> integrator;
     std::unique_ptr<StandardSimulator> simulator;
 
 public:
     HeatSimulationWrapper(int nx, double dx, double alpha) {
-        state = std::make_shared<mod::physics_heat::Heat1DState>(nx, dx, 0.0);
-        model = std::make_shared<mod::physics_heat::Heat1DModel>(alpha, 0.0, 0.0);
+        Spatial1D spatial(nx, dx);
+        state = std::make_shared<mod::heat::Heat1DImplicitState>(spatial, 0.0);
+        model = std::make_shared<mod::heat::Heat1DModel>(alpha, 0.0, 0.0);
         solver = std::make_shared<LinearTridiagonalSolver>();
         integrator = std::make_shared<ImplicitEulerIntegrator>();
         simulator = std::make_unique<StandardSimulator>(model, state, solver, integrator);
@@ -55,16 +57,17 @@ public:
  */
 class PressureSimulationWrapper {
 private:
-    std::shared_ptr<mod::physics_pressure::Pressure1DModel> model;
-    std::shared_ptr<mod::physics_pressure::Pressure1DState> state;
+    std::shared_ptr<mod::pressure::Pressure1DModel> model;
+    std::shared_ptr<mod::pressure::Pressure1DState> state;
     std::shared_ptr<LinearTridiagonalSolver> solver;
     std::shared_ptr<ImplicitEulerIntegrator> integrator;
     std::unique_ptr<StandardSimulator> simulator;
 
 public:
     PressureSimulationWrapper(int nx, double dx, double k, double phi, double mu, double ct) {
-        state = std::make_shared<mod::physics_pressure::Pressure1DState>(nx, dx, 0.0);
-        model = std::make_shared<mod::physics_pressure::Pressure1DModel>(k, phi, mu, ct, 0.0, 0.0);
+        Spatial1D spatial(nx, dx);
+        state = std::make_shared<mod::pressure::Pressure1DState>(spatial, 0.0);
+        model = std::make_shared<mod::pressure::Pressure1DModel>(k, phi, mu, ct, 0.0, 0.0);
         solver = std::make_shared<LinearTridiagonalSolver>();
         integrator = std::make_shared<ImplicitEulerIntegrator>();
         simulator = std::make_unique<StandardSimulator>(model, state, solver, integrator);
@@ -75,10 +78,7 @@ public:
     }
 
     void set_boundary_conditions(double left, double right) {
-        // Re-construct or update model? Currently model stores BCs in constructor.
-        // I will add a set_bcs to Pressure1DModel if missing, or recreate here.
-        // For now, let's assume I'll add set_bcs to model.hpp to match Heat.
-        model = std::make_shared<mod::physics_pressure::Pressure1DModel>(1.0, 1.0, 1.0, 1.0, left, right); // Hack for now, need better sync
+        model->set_bcs(left, right);
     }
 
     void step(double dt) {

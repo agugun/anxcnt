@@ -1,0 +1,7 @@
+# Heat 1D Explicit Simulation Parameters
+nx = 50
+alpha = 0.01
+dx = 0.1
+dt = 0.1
+t_end = 5.0
+enable_vtk = 0
