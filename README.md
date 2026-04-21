@@ -1,90 +1,99 @@
-# NumPhys
+# AXSCNT 
+**Architecture of eXperimental Software for Computational Numerical Techniques**  *Pronounced: /ax-SENT/ (like "Axe-Scent")* is a coding framework designed as a **collaborative bridge** between pure mathematics, domain physics, and software engineering.
 
-A numerical physics project incorporating a C++ src and a Python data science/visualization stack.
-
-## Project Structure
-- `src/` - C++ kernel and simulation files.
-- `bindings/` - Python-C++ bridge and bindings layer.
-- `notebook/` - Jupyter notebooks for running experiments and visualizations.
-- `web/` - Directory for Streamlit UI components.
-
-## Setup Instructions
-
-Follow these step-by-step instructions to set up the Python environment for the project.
-
-### 1. Prerequisites
-- **Python 3.8+** installed on your system.
-- **C++ Compiler** (e.g., GCC/Clang or MSVC) for the src.
-
-### 2. Create the Python Virtual Environment
-Navigate to the root directory of the project in your terminal, and create a virtual environment:
-
-```bash
-python -m venv .venv
-```
-
-### 3. Activate the Environment
-
-**On Linux/macOS:**
-```bash
-source venv/bin/activate
-```
-
-**On Windows:**
-```bash
-.\venv\Scripts\activate
-```
-
-### 4. Install Dependencies
-Once the environment is activated, install the required packages using `requirements.txt`:
-
-```bash
-pip install -r requirements.txt
-```
-
-### 5. Start Jupyter (Optional)
-To interact with the sample notebooks:
-
-```bash
-jupyter notebook
-```
-
-
-### 6. Build the C++ Backend (High Performance)
-
-The src uses a unified build system via a **Makefile**. To compile the Python bridge and the standalone C++ executables:
-
-make all
-
-This will create a `dist/` directory for C++ executables and build the Python bridge:
-- `bindings/python/cnt.so`: The Python interface module.
-- `dist/heat_1d_implicit`: A standalone C++ executable for the 1D Heat Equation.
-
-To clean the build artifacts, use:
-```bash
-make clean
-```
-
-### 7. Run the Interactive UI (Streamlit)
-
-To launch the real-time simulation dashboard with Plotly visualization:
-
-```bash
-streamlit run web/app.py
-```
-This will open a web interface where you can adjust physical parameters (diffusivity, time step) and observe the thermal evolution instantly.
+*   **Low-Level Transparency**: Prioritize collaboration at the implementation level. Every numerical kernel is structured to be readable for physicists while remaining highly optimized for silicon.
+*   **Physics-First Architecture**: Organized by physical disciplines (Thermodynamics, Fluids, Reservoirs), ensuring that the code structure mirrors the mental model of the researcher.
+*   **The Analytical Bridge**: Explicitly bridge the gap between "notebook math" and "backend production" through a unified multi-stage workflow.
 
 ---
 
-### Building & Debugging Physics Modules
-Each physics module (e.g., `heat_1d_implicit`) can be built and debugged dynamically:
+### Workflow
+AXSCNT provides a seamless end-to-end pipeline from conceptual derivation to deployable high-performance kernels.
 
-1.  **Build a Module**: Press **Ctrl+Shift+B** (or **Run Task** -> **build physics**). You will be prompted to select a module from the list.
-2.  **Debug a Module**: Press **F5** (or **Run and Debug** -> **Debug Simulation Physics**). You will be prompted to select a module. VS Code will automatically build the latest version with debug symbols (`-g`) and start the debugger.
+| Stage | Focus | Primary Tools | Role in Ecosystem |
+| :--- | :--- | :--- | :--- |
+| **1. Formulation** | Theoretical Derivations | **Sympy** | Exact symbolic math & PDE definitions. |
+| **2. Prototyping** | Numerical Stability | **JAX / Numpy** | Rapid experimental verification with XLA acceleration. |
+| **3. Production** | High Performance | **C++17 / OpenMP** | Deployable, memory-safe, parallel numerical engine. |
+| **4. Integration** | Synergy | **axcnt_cpp** | High-speed Python bindings for hybrid workflows. |
+| **5. Insight** | Visualization | **Dash / VTK** | Interactive analytics and field monitoring. |
 
-3.  **Launch Streamlit UI**: Press **F5** and select **Launch Streamlit UI** from the debug configuration dropdown. This will start the web dashboard using the project's virtual environment and automatically configure the `PYTHONPATH` to find the C++ src.
+---
 
-### Registering New Physics Modules
-When you add a new physics folder to `src/physics/` (e.g., `wave_equation`), you must register it in the following files to enable VS Code selection:
-- `.vscode/tasks.json`: Add the name to the `options` list of the `selectedCase` input.
-- `.vscode/launch.json`: Add the name to the `options` list of the `selectedCase` input.
+### Project Structure
+
+```bash
+axscnt/
+├── src/
+│   ├── lib/            # Foundational Framework & Numerical Utilities (C++)
+│   └── modules/        # Domain-Specific Physics Engines (C++)
+│       ├── thermodynamics/ 
+│       ├── fluids/         
+│       ├── reservoir/      
+│       ├── wave/           
+│       └── pressure/       
+├── bindings/           # High-performance C++ connectivity (axcnt_cpp)
+├── notebook/           # The Analytical Bridge (Math ➔ Python ➔ C++)
+│   ├── thermodynamics/ 
+│   ├── fluids/         
+│   ├── reservoir/      
+│   └── ...
+├── web/                # Collaborative Visual Analytics (Python/Dash)
+├── benchmark/          # Performance & Scalability Benchmarking
+├── dist/               # Production-ready C++ Executables
+└── exports/            # Standardized Simulation Outputs (VTK, JSON, CSV)
+```
+
+---
+
+### Internal Architecture
+
+The C++ core is strictly segregated by namespaces to ensure mathematical consistency and infinite modularity.
+
+#### The Numerical Engine (`top` & `num`)
+- **Architectural Contracts (`top`)**: Defines the abstract interfaces (`IState`, `IModel`, `ISolver`) that enforce the AXSCNT "Simulation Contract".
+- **Numerical Core (`num`)**: Contains vectorized linear solvers (BiCGSTAB, Tridiagonal), non-linear Newton-Raphson schemes, and sparse matrix implementations.
+- **Infrastructure (`utl`)**: Handles cross-cutting concerns like hierarchical configuration, standardized logging, and filesystem orchestration.
+
+#### Physics Module Anatomy (`mod`)
+Every physical module implements the framework contract through four key components:
+
+1.  **`model.hpp`**: Defines the physical constants and the **Governing Equation** discretization.
+2.  **`state.hpp`**: A structured snapshot of the field data at any point in time.
+3.  **`simulation.hpp`**: A factory/builder that assembles the complex object graph (Grid ➔ Discretizer ➔ Linearizer ➔ Solver).
+4.  **`main.cpp`**: The execution orchestrator for standalone deployment.
+
+---
+
+### Quick Start
+
+#### 1. Setup the Analytical Environment
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+#### 2. Compile the Production Engine
+```bash
+make all
+```
+
+#### 3. Run Your First Simulation
+```bash
+# Run a 2D Reservoir Simulation
+./dist/reservoir_2d input/reservoir_2d.txt
+
+# Launch the Visual Analytics Dashboard
+python web/app.py
+```
+
+---
+
+### Openness
+AXSCNT is built from & for the community.
+- **Copy-Paste Encouraged**: Take any kernel, discretization strategy, or utility for your own projects.
+- **No Restrictions**: Use it for research, production, or education without friction.
+- **Contributions**: We welcome domain experts to implement new physics modules using our standardized `top` interfaces.
+
+---

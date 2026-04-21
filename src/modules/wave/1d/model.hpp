@@ -1,61 +1,107 @@
 #pragma once
-#include "lib/modules.hpp"
+#include "lib/interfaces.hpp"
 #include "state.hpp"
-#include "lib/operators.hpp"
-
+#include "lib/discretization.hpp"
+ 
 namespace mod {
 using namespace top;
 namespace wave {
 
 /**
- * @brief 1D Wave Propagation Model.
- * 
- * Governing Equation (2nd Order):
- *   d^2u/dt^2 = c^2 * d^2u/dx^2
- * 
- * Mixed First-Order System:
- *   1. du/dt = v
- *   2. dv/dt = c^2 * d^2u/dx^2
- * 
- * Physical Logic:
- *   Models the propagation of waves (e.g., sound or vibration) with speed 'c'. 
- *   The state tracks both displacement (u) and velocity (v).
- * 
- * Discretization:
- *   - Spatial: 2nd Order Central Difference for the displacement Laplacian.
- *   - Temporal: The model provides the RHS for explicit integration. When 
- *     used with a proper integrator (like Leapfrog), it preserves energy.
+ * @brief 1D Wave Physical Model (Properties).
  */
 class Wave1DModel : public IModel {
-private:
-    double wave_speed;
-
 public:
-    Wave1DModel(double c) : wave_speed(c) {}
+    std::shared_ptr<num::discretization::Conductance1D> cond;
+    Vector storage_coeff;
 
-    Vector evaluate_rhs(const IState& state) const override {
-        const auto& w_state = dynamic_cast<const Wave1DState&>(state);
+    Wave1DModel(std::shared_ptr<num::discretization::Conductance1D> c, const Vector& storage) 
+        : cond(c), storage_coeff(storage) {}
+
+    double get_tolerance() const override { return 1e-4; }
+
+    Vector get_accumulation_weights(const IGrid& grid, const IState& state) const override {
+        size_t n = storage_coeff.size();
+        Vector weights(2 * n);
+        for (size_t i = 0; i < n; ++i) {
+            weights[i] = 1.0;          // u accumulation weight
+            weights[i + n] = storage_coeff[i]; // v accumulation weight (mass)
+        }
+        return weights;
+    }
+};
+
+/**
+ * @brief 1D Wave FVM Discretizer (Numerical Assembly).
+ * Assembles the first-order system:
+ *   du/dt = v
+ *   m*dv/dt = Sum(Flux)
+ */
+class Wave1DDiscretizer : public IDiscretizer {
+public:
+    void assemble_jacobian(const IGrid& grid, const IModel& model, const IState& state, SparseMatrix& J) const override {
+        const auto& w_model = static_cast<const Wave1DModel&>(model);
+        const auto& w_state = static_cast<const Wave1DState&>(state);
         size_t n = w_state.u.size();
-        Vector rhs(2 * n, 0.0);
 
-        // du/dt = v
-        for (size_t i = 0; i < n; ++i) {
-            rhs[i] = w_state.v[i];
+        if (J.rows != 2 * (int)n) J = SparseMatrix(2 * n, 2 * n);
+        J.triplets.clear();
+
+        // 1. du/dt = v part
+        // J_uv = -I
+        for (int i = 0; i < (int)n; ++i) {
+            J.triplets.push_back({i, i + (int)n, -1.0});
         }
 
-        // dv/dt = c^2 * L(u)
-        Vector lap = mop::laplace_1d(w_state.u, w_state.spatial.dx);
-        double c2 = wave_speed * wave_speed;
-        for (size_t i = 0; i < n; ++i) {
-            rhs[n + i] = c2 * lap[i];
+        // 2. m*dv/dt = Laplacian(u) part
+        // J_vu = -Laplacian
+        for (int i = 1; i < (int)n - 1; ++i) {
+            double t_prev = w_model.cond->T[i-1];
+            double t_next = w_model.cond->T[i];
+            
+            int cur_v = i + (int)n;
+            J.triplets.push_back({cur_v, i - 1, -t_prev});
+            J.triplets.push_back({cur_v, i, t_prev + t_next});
+            J.triplets.push_back({cur_v, i + 1, -t_next});
         }
-
-        return rhs;
     }
 
-    // Placeholders for implicit methods
-    Vector build_residual(const IState&, const IState&, double) const override { return {}; }
-    Matrix build_jacobian(const IState&, double) const override { return {}; }
+    void assemble_residual(const IGrid& grid, const IModel& model, const IState& state, Vector& R) const override {
+        const auto& w_model = static_cast<const Wave1DModel&>(model);
+        const auto& w_state = static_cast<const Wave1DState&>(state);
+        size_t n = w_state.u.size();
+
+        // 1. R_u = -v
+        #pragma omp parallel for
+        for (int i = 0; i < (int)n; ++i) {
+            R[i] = -w_state.v[i];
+        }
+
+        // 2. R_v = -NetFlux(u)
+        #pragma omp parallel for
+        for (int i = 1; i < (int)n - 1; ++i) {
+            double net_flux = w_model.cond->T[i-1] * (w_state.u[i-1] - w_state.u[i]) +
+                              w_model.cond->T[i]   * (w_state.u[i+1] - w_state.u[i]);
+            R[i + n] = -net_flux;
+        }
+    }
+
+    void apply_boundary_conditions(const IGrid& grid, const IModel& model, const IState& state, SparseMatrix& J, Vector& R) const override {
+        const auto& w_state = static_cast<const Wave1DState&>(state);
+        size_t n = w_state.u.size();
+
+        // Dirichlet BCs for u (fixed displacement)
+        R[0] = w_state.u[0]; // Assuming 0 for now or set from model
+        R[n-1] = w_state.u[n-1];
+        J.triplets.push_back({0, 0, 1.0});
+        J.triplets.push_back({(int)n-1, (int)n-1, 1.0});
+
+        // Fixed velocity at boundaries
+        R[n] = w_state.v[0];
+        R[2*n-1] = w_state.v[n-1];
+        J.triplets.push_back({(int)n, (int)n, 1.0});
+        J.triplets.push_back({(int)2*n-1, (int)2*n-1, 1.0});
+    }
 };
 
 } // namespace wave

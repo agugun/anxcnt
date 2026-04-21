@@ -1,6 +1,6 @@
 #pragma once
 #include "lib/spatial.hpp"
-#include "lib/modules.hpp"
+#include "lib/interfaces.hpp"
 
 namespace mod {
 using namespace top;
@@ -9,15 +9,19 @@ namespace pressure {
 class Pressure1DState : public IState {
 public:
     Vector pressures;
-    Spatial1D spatial;
+    std::shared_ptr<Spatial1D> spatial;
 
-    Pressure1DState(Spatial1D spatial, double initial_press) 
-        : pressures(spatial.nx, initial_press), spatial(spatial) {}
+    Pressure1DState(std::shared_ptr<Spatial1D> s, double initial_press) 
+        : pressures(s->nx, initial_press), spatial(s) {}
 
-    void update(const Vector& delta) override {
+    void apply_update(const std::vector<double>& delta) override {
         for (size_t i = 0; i < pressures.size(); ++i) {
             pressures[i] += delta[i];
         }
+    }
+
+    std::vector<double> to_vector() const override {
+        return pressures;
     }
 
     std::unique_ptr<IState> clone() const override {

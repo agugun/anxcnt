@@ -1,7 +1,6 @@
 #pragma once
 #include "lib/spatial.hpp"
-#include "lib/modules.hpp"
-#include <vector>
+#include "lib/interfaces.hpp"
 
 namespace mod {
 using namespace top;
@@ -9,21 +8,20 @@ namespace reservoir {
 
 class Reservoir1DState : public IState {
 public:
-    std::vector<double> pressures; // [psi]
-    Spatial1D spatial;
+    Vector pressures; // [psi]
+    std::shared_ptr<Spatial1D> spatial;
 
-    Reservoir1DState(Spatial1D spatial, double initial_p)
-        : spatial(spatial), pressures(spatial.nx, initial_p) {}
+    Reservoir1DState(std::shared_ptr<Spatial1D> s, double initial_p)
+        : pressures(s->nx, initial_p), spatial(s) {}
 
-    size_t size() const { return pressures.size(); }
-    
-    void update(const Vector& delta) override {
-        if (delta.size() != pressures.size()) {
-            throw std::runtime_error("State Update Error: Size mismatch between delta and pressures.");
-        }
+    void apply_update(const std::vector<double>& delta) override {
         for (size_t i = 0; i < pressures.size(); ++i) {
             pressures[i] += delta[i];
         }
+    }
+
+    std::vector<double> to_vector() const override {
+        return pressures;
     }
 
     std::unique_ptr<IState> clone() const override {

@@ -1,13 +1,18 @@
-# Black Oil 2D Simulation Parameters
+# Export Configuration
+export_dir = exports
+project_name = res_bo_2d
+enable_vtk = 1
+enable_json = 0
+enable_csv = 1
+
+# Parameters
 nx = 10
 ny = 10
 dx = 100.0
 dy = 100.0
+h = 50.0
 k = 100.0
 phi = 0.2
-h = 50.0
 q_well = -200.0
-t_end = 1.0
 dt = 0.01
-enable_vtk = 0
-enable_csv = 0
+t_end = 1.0

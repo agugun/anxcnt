@@ -1,3 +1,7 @@
+# Export Configuration
+export_dir = exports
+project_name = default_run
+
 # Black Oil 3D Simulation Parameters
 nx = 10
 ny = 10
@@ -7,4 +11,6 @@ k = 100.0
 phi = 0.2
 t_end = 24.0
 dt = 0.5
-enable_vtk = 0
+enable_vtk = 1
+enable_json = 1
+enable_csv = 1

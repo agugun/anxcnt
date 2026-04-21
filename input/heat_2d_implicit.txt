@@ -1,9 +1,15 @@
-# Heat 2D Implicit Simulation Parameters
-nx = 61
-ny = 61
-dx = 0.1
-dy = 0.1
-alpha = 0.1
+# Export Configuration
+export_dir = exports
+project_name = heat_2d_im
+enable_vtk = 1
+enable_json = 0
+enable_csv = 1
+
+# Parameters
+nx = 20
+ny = 20
+alpha = 0.01
+dx = 0.5
+dy = 0.5
 dt = 0.1
 t_end = 2.0
-enable_vtk = 0

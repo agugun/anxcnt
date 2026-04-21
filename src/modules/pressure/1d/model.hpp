@@ -1,85 +1,78 @@
 #pragma once
-#include "lib/modules.hpp"
+#include "lib/interfaces.hpp"
 #include "state.hpp"
-#include "lib/operators.hpp"
-
+#include "lib/discretization.hpp"
+ 
 namespace mod {
 using namespace top;
 namespace pressure {
 
 /**
- * @brief 1D Pressure Diffusivity Model.
- * 
- * Governing Equation:
- *   d^2P/dx^2 = (1 / eta) * dP/dt
- * 
- * Physical Logic:
- *   Specialized for transient pressure analysis in conduits or simple 1D 
- *   reservoir geometries.
- *   - eta: Diffusivity constant derived from k / (phi * mu * ct).
- * 
- * Boundary Conditions:
- *   Dirichlet at both ends (Left and Right).
- * 
- * Discretization:
- *   - Spatial: 2nd Order Central Difference scheme for the Laplacian.
- *   - Temporal: Backward Euler (Implicit) method for absolute stability.
- * 
- * Numerical Scheme:
- *   Uses a coupled residual/Jacobian approach, making it consistent with 
- *   Newton-Raphson solvers used in more complex multiphase modules.
+ * @brief 1D Pressure Physical Model (Properties).
  */
 class Pressure1DModel : public IModel {
-private:
-    double eta; // Diffusivity constant (k / (phi * mu * ct))
-    double p_left, p_right;
-
 public:
-    Pressure1DModel(double k, double phi, double mu, double ct, double pl, double pr)
-        : p_left(pl), p_right(pr) {
-        eta = 0.0002637 * k / (phi * mu * ct);
-    }
+    double p_left, p_right;
+    std::shared_ptr<num::discretization::Conductance1D> cond;
+    Vector storage_coeff;
 
-    Vector evaluate_rhs(const IState& state) const override {
-        const auto& p_state = dynamic_cast<const Pressure1DState&>(state);
-        Vector rhs = mop::laplace_1d(p_state.pressures, p_state.spatial.dx);
-        for (auto& v : rhs) v *= eta;
-        return rhs;
-    }
+    Pressure1DModel(std::shared_ptr<num::discretization::Conductance1D> c, const Vector& storage, double pl, double pr)
+        : p_left(pl), p_right(pr), cond(c), storage_coeff(storage) {}
 
-    Vector build_residual(const IState& s_new, const IState& s_old, double dt) const override {
-        const auto& p_new = dynamic_cast<const Pressure1DState&>(s_new);
-        const auto& p_old = dynamic_cast<const Pressure1DState&>(s_old);
-        
-        Vector lap = mop::laplace_1d(p_new.pressures, p_new.spatial.dx);
-        Vector r(p_new.pressures.size());
-        for (size_t i = 0; i < r.size(); ++i) {
-            r[i] = p_new.pressures[i] - p_old.pressures[i] - dt * eta * lap[i];
-        }
-        r[0] = p_new.pressures[0] - p_left;
-        r[r.size()-1] = p_new.pressures[r.size()-1] - p_right;
-        return r;
-    }
+    double get_tolerance() const override { return 1e-6; }
 
-    Matrix build_jacobian(const IState& state, double dt) const override {
-        const auto& p_state = dynamic_cast<const Pressure1DState&>(state);
+    Vector get_accumulation_weights(const IGrid& grid, const IState& state) const override {
+        return storage_coeff;
+    }
+};
+
+/**
+ * @brief 1D Pressure FVM Discretizer (Numerical Assembly).
+ */
+class Pressure1DDiscretizer : public IDiscretizer {
+public:
+    void assemble_jacobian(const IGrid& grid, const IModel& model, const IState& state, SparseMatrix& J) const override {
+        const auto& p_model = static_cast<const Pressure1DModel&>(model);
+        const auto& p_state = static_cast<const Pressure1DState&>(state);
         size_t n = p_state.pressures.size();
-        double dx = p_state.spatial.dx;
-        double coef = eta * dt / (dx * dx);
 
-        Matrix jac(n, Vector(n, 0.0));
-        for (size_t i = 1; i < n - 1; ++i) {
-            jac[i][i-1] = -coef;
-            jac[i][i] = 1.0 + 2.0 * coef;
-            jac[i][i+1] = -coef;
+        if (J.rows != n) J = SparseMatrix(n, n);
+        J.triplets.clear();
+
+        for (int i = 1; i < (int)n - 1; ++i) {
+            double t_prev = p_model.cond->T[i-1];
+            double t_next = p_model.cond->T[i];
+            
+            J.triplets.push_back({i, i-1, -t_prev});
+            J.triplets.push_back({i, i, t_prev + t_next});
+            J.triplets.push_back({i, i+1, -t_next});
         }
-        jac[0][0] = 1.0;
-        jac[n-1][n-1] = 1.0;
-        return jac;
     }
-    void set_bcs(double left, double right) {
-        p_left = left;
-        p_right = right;
+
+    void assemble_residual(const IGrid& grid, const IModel& model, const IState& state, Vector& R) const override {
+        const auto& p_model = static_cast<const Pressure1DModel&>(model);
+        const auto& p_state = static_cast<const Pressure1DState&>(state);
+        size_t n = p_state.pressures.size();
+
+        #pragma omp parallel for
+        for (int i = 1; i < (int)n - 1; ++i) {
+            double net_flux = p_model.cond->T[i-1] * (p_state.pressures[i-1] - p_state.pressures[i]) +
+                              p_model.cond->T[i]   * (p_state.pressures[i+1] - p_state.pressures[i]);
+            R[i] = -net_flux;
+        }
+    }
+
+    void apply_boundary_conditions(const IGrid& grid, const IModel& model, const IState& state, SparseMatrix& J, Vector& R) const override {
+        const auto& p_model = static_cast<const Pressure1DModel&>(model);
+        const auto& p_state = static_cast<const Pressure1DState&>(state);
+        size_t n = R.size();
+
+        // Dirichlet BCs
+        R[0] = p_state.pressures[0] - p_model.p_left;
+        R[n-1] = p_state.pressures[n-1] - p_model.p_right;
+
+        J.triplets.push_back({0, 0, 1.0});
+        J.triplets.push_back({(int)n-1, (int)n-1, 1.0});
     }
 };
 

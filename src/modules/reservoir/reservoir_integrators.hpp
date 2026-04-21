@@ -65,14 +65,14 @@ public:
         
         // --- 2. UPDATE SATURATION EXPLICITLY ---
         Vector sw_new = state.water_saturations;
-        double pore_vol = model.phi * (dx * dy * model.h);
+        double pv = model.pore_vol_per_cell; // Now a single pre-calculated value
 
         for (int j = 0; j < ny; ++j) {
             for (int i = 0; i < nx; ++i) {
                 int cur = state.idx(i, j);
                 double water_flux_sum = 0.0;
                 
-                auto add_water_flux = [&](int ni, int nj, double dist) {
+                auto add_water_flux = [&](int ni, int nj, double t_rock) {
                     int neighbor = state.idx(ni, nj);
                     double p_cur = state.pressures[cur];
                     double p_neigh = state.pressures[neighbor];
@@ -82,24 +82,25 @@ public:
                     model.get_rel_perm(sw_up, krw, kro);
                     
                     double lambda_w = krw / model.mu_w;
-                    double T_w = unit_conv * model.k_abs * lambda_w * (model.h * (dist == dx ? dy : dx)) / dist;
-                    water_flux_sum += T_w * (p_neigh - p_cur);
+                    double Tw = t_rock * lambda_w;
+                    water_flux_sum += Tw * (p_neigh - p_cur);
                 };
 
-                if (i > 0) add_water_flux(i - 1, j, dx);
-                if (i < nx - 1) add_water_flux(i + 1, j, dx);
-                if (j > 0) add_water_flux(i, j - 1, dy);
-                if (j < ny - 1) add_water_flux(i, j + 1, dy);
+                if (i > 0) add_water_flux(i - 1, j, model.rock_cond->Tx[j * (nx - 1) + i - 1]);
+                if (i < nx - 1) add_water_flux(i + 1, j, model.rock_cond->Tx[j * (nx - 1) + i]);
+                if (j > 0) add_water_flux(i, j - 1, model.rock_cond->Ty[(j - 1) * nx + i]);
+                if (j < ny - 1) add_water_flux(i, j + 1, model.rock_cond->Ty[j * nx + i]);
 
                 double qw = 0.0;
-                for (const auto& s : model.sources) {
-                    auto w = std::dynamic_pointer_cast<mod::IWell>(s);
+                for (const auto& s : model.wells) {
+                    // Try to cast to ReservoirWellDual2D to get water rate
+                    auto w = std::dynamic_pointer_cast<mod::ReservoirWellDual2D>(s);
                     if (w && w->i == i && w->j == j) {
                         qw = w->get_q_water(state);
                     }
                 }
 
-                double delta_sw = (dt * (water_flux_sum + qw) * 5.615) / (24.0 * pore_vol);
+                double delta_sw = (dt * (water_flux_sum + qw)) / pv;
                 sw_new[cur] += delta_sw;
                 sw_new[cur] = std::max(0.0, std::min(1.0, sw_new[cur]));
             }

@@ -26,26 +26,23 @@
 #include <algorithm>
 #include <functional>
 
-#include "iterative_solvers.hpp"
+
+
+#include "interfaces.hpp"
 
 namespace num {
 using namespace top;
 
 /**
  * @brief Dense LU Linear Solver with Partial Pivoting.
- * 
- * Fits With: 
- * - Deterministic solution for any square, non-singular linear system.
- * - Small to medium sized dense matrices.
  */
 class LUSolver : public ISolver {
 public:
-    Vector solve(const IModel& model, const IState& state, double dt) override {
-        auto state_old = state.clone();
-        Vector R = model.build_residual(state, *state_old, dt);
-        Matrix J = model.build_jacobian(state, dt);
-        // Standard Newton-Raphson update: J * delta = -R
-        return solve_system(J, scale(R, -1.0));
+    Vector solve(const SparseMatrix& A, const Vector& b) override {
+        // LU currently works on dense Matrix. For now, we convert Sparse to Dense.
+        // In a real HPC environment, we would use a Sparse LU like SuperLU.
+        Matrix dense_A = A.to_dense(); 
+        return solve_system(dense_A, b);
     }
 
     Vector solve_system(Matrix A, Vector b) {
@@ -77,33 +74,18 @@ public:
         }
         return x;
     }
-
-private:
-    Vector scale(const Vector& v, double s) {
-        Vector res = v;
-        for (auto& val : res) val *= s;
-        return res;
-    }
 };
 
 /**
  * @brief Specialized Tridiagonal Solver (Thomas Algorithm).
- * 
- * Fits With:
- * - 1D discretized partial differential equations (e.g., Heat 1D, Reservoir 1D).
  */
 class LinearTridiagonalSolver : public ISolver {
 public:
-    Vector solve(const IModel& model, const IState& state, double dt) override { 
-        auto state_old = state.clone();
-        Vector R = model.build_residual(state, *state_old, dt);
-        Matrix J = model.build_jacobian(state, dt);
-        return solve_system(J, scale(R, -1.0));
+    Vector solve(const SparseMatrix& A, const Vector& b) override { 
+        Matrix dense_A = A.to_dense(); 
+        return solve_system(dense_A, b);
     }
 
-    /**
-     * @brief Resolves a tridiagonal system using the Thomas Algorithm.
-     */
     Vector solve_system(const Matrix& A, const Vector& b) {
         int n = b.size();
         if (n == 0) return {};
@@ -134,47 +116,133 @@ public:
 
         return x;
     }
+};
 
-private:
-    Vector scale(const Vector& v, double s) {
-        Vector res = v;
-        for (auto& val : res) val *= s;
-        return res;
+/**
+ * @brief BiCGSTAB (Biconjugate Gradient Stabilized) Solver.
+ */
+class BiCGSTABSolver : public ISolver {
+public:
+    double tolerance = 1e-8;
+    int max_iterations = 1000;
+    bool verbose = false;
+
+    Vector solve(const SparseMatrix& A, const Vector& b) override {
+        return solve_system(A, b, tolerance, max_iterations, verbose);
+    }
+
+    static Vector solve_system(const SparseMatrix& A, 
+                               const std::vector<double>& b, 
+                               double tol = 1e-8, 
+                               int max_iter = 1000,
+                               bool verbose = false) {
+        int n = (int)b.size();
+        std::vector<double> x(n, 0.0);
+        
+        std::vector<double> r(n), r_hat(n), v(n), p(n), s(n), t(n);
+        std::vector<double> Ax0 = A.multiply(x);
+        
+        #pragma omp parallel for
+        for (int i = 0; i < n; ++i) {
+            r[i] = b[i] - Ax0[i];
+            r_hat[i] = r[i];
+            v[i] = 0.0;
+            p[i] = 0.0;
+        }
+        
+        double rho = 1.0, alpha = 1.0, omega = 1.0;
+        
+        for (int i = 0; i < max_iter; ++i) {
+            double rho_new = 0.0;
+            #pragma omp parallel for reduction(+:rho_new)
+            for(int j=0; j<n; ++j) rho_new += r_hat[j] * r[j];
+            
+            if (std::abs(rho_new) < 1e-60) break;
+            
+            if (i == 0) {
+                #pragma omp parallel for
+                for(int j=0; j<n; ++j) p[j] = r[j];
+            } else {
+                double beta = (rho_new / rho) * (alpha / omega);
+                #pragma omp parallel for
+                for(int j=0; j<n; ++j) {
+                    p[j] = r[j] + beta * (p[j] - omega * v[j]);
+                }
+            }
+            
+            v = A.multiply(p);
+            double v_dot_rhat = 0.0;
+            #pragma omp parallel for reduction(+:v_dot_rhat)
+            for(int j=0; j<n; ++j) v_dot_rhat += r_hat[j] * v[j];
+            
+            if (std::abs(v_dot_rhat) < 1e-60) break;
+
+            alpha = rho_new / v_dot_rhat;
+            
+            double norm_s = 0.0;
+            #pragma omp parallel for reduction(+:norm_s)
+            for(int j=0; j<n; ++j) {
+                s[j] = r[j] - alpha * v[j];
+                norm_s += s[j] * s[j];
+            }
+            norm_s = std::sqrt(norm_s);
+            
+            if (norm_s < tol) {
+                #pragma omp parallel for
+                for(int j=0; j<n; ++j) x[j] += alpha * p[j];
+                return x;
+            }
+            
+            t = A.multiply(s);
+            double t_dot_t = 0.0, t_dot_s = 0.0;
+            #pragma omp parallel for reduction(+:t_dot_t, t_dot_s)
+            for(int j=0; j<n; ++j) {
+                t_dot_t += t[j] * t[j];
+                t_dot_s += t[j] * s[j];
+            }
+            
+            omega = (t_dot_t < 1e-60) ? 0.0 : t_dot_s / t_dot_t;
+            
+            double norm_r = 0.0;
+            #pragma omp parallel for reduction(+:norm_r)
+            for(int j=0; j<n; ++j) {
+                x[j] += alpha * p[j] + omega * s[j];
+                r[j] = s[j] - omega * t[j];
+                norm_r += r[j] * r[j];
+            }
+            norm_r = std::sqrt(norm_r);
+            
+            if (norm_r < tol) return x;
+            rho = rho_new;
+        }
+        
+        return x;
     }
 };
 
 /**
- * @brief Conjugate Gradient Iterative Solver.
- * 
- * Fits With:
- * - Large, sparse, Symmetric Positive Definite (SPD) matrices.
+ * @brief Conjugate Gradient Linear Solver.
  */
 class ConjugateGradientSolver : public ISolver {
 public:
-    Vector solve(const IModel& model, const IState& state, double dt) override {
-        auto state_old = state.clone();
-        Vector R = model.build_residual(state, *state_old, dt);
-        
-        // Setup matrix-vector operator for J * v
-        auto apply_A = [&](const Vector& v) {
-            return model.apply_jacobian(state, v, dt);
-        };
+    double tolerance = 1e-6;
+    int max_iterations = 1000;
 
-        Vector guess(R.size(), 0.0);
-        // Solve J * delta = -R
-        return solve_iterative(apply_A, scale(R, -1.0), guess);
+    Vector solve(const SparseMatrix& A, const Vector& b) override {
+        Vector guess(b.size(), 0.0);
+        return solve_system(A, b, guess, tolerance, max_iterations);
     }
     
-    Vector solve_iterative(std::function<Vector(const Vector&)> A_func, Vector b, Vector x0, 
-                           double tol = 1e-6, int max_iter = 1000) {
+    Vector solve_system(const SparseMatrix& A, const Vector& b, Vector x0, 
+                        double tol = 1e-6, int max_iter = 1000) {
         int n = b.size();
         Vector x = x0;
-        Vector r = subtract(b, A_func(x));
+        Vector r = subtract(b, A.multiply(x));
         Vector p = r;
         double rsold = dot(r, r);
 
         for (int i = 0; i < max_iter; i++) {
-            Vector Ap = A_func(p);
+            Vector Ap = A.multiply(p);
             double alpha = rsold / dot(p, Ap);
             x = add(x, scale(p, alpha));
             r = subtract(r, scale(Ap, alpha));
@@ -189,136 +257,24 @@ public:
 private:
     double dot(const Vector& a, const Vector& b) {
         double res = 0;
-        for (size_t i = 0; i < a.size(); i++) res += a[i] * b[i];
+        #pragma omp parallel for reduction(+:res)
+        for (int i = 0; i < (int)a.size(); i++) res += a[i] * b[i];
         return res;
     }
-    Vector add(Vector a, Vector b) {
-        for (size_t i = 0; i < a.size(); i++) a[i] += b[i];
+    Vector add(Vector a, const Vector& b) {
+        #pragma omp parallel for
+        for (int i = 0; i < (int)a.size(); i++) a[i] += b[i];
         return a;
     }
-    Vector subtract(Vector a, Vector b) {
-        for (size_t i = 0; i < a.size(); i++) a[i] -= b[i];
+    Vector subtract(Vector a, const Vector& b) {
+        #pragma omp parallel for
+        for (int i = 0; i < (int)a.size(); i++) a[i] -= b[i];
         return a;
     }
     Vector scale(Vector a, double s) {
-        for (size_t i = 0; i < a.size(); i++) a[i] *= s;
-        return a;
-    }
-};
-
-/**
- * @brief Robust Newton-Raphson Solver with Backtracking Line Search.
- * 
- * Fits With:
- * - Non-linear systems of equations (e.g., Multiphase Reservoir flow, Implicit Heat with non-linear conductivity).
- * 
- * Best Case:
- * - Initial guess is within the "radius of convergence" of the solution.
- * - Smooth, differentiable functions with well-behaved Jacobians.
- * 
- * Worst Case:
- * - Discontinuous functions or singular Jacobians (divergence).
- * - Highly oscillating residuals where line search fails to find a descent direction.
- * 
- * Sample Input:
- * @param model An IModel implementation that provides build_residual() and build_jacobian().
- * @param state The current IState (updated in-place if converged).
- * @param dt Time step for implicit formulation.
- * @param tolerance Convergence criteria for the residual norm (e.g., 1e-4).
- */
-class NewtonSolver : public ISolver {
-public:
-    struct ConvergenceInfo {
-        bool converged;
-        int iterations;
-        double final_norm;
-        Vector cumulative_delta; 
-    };
-
-    Vector solve(const IModel& model, const IState& state, double dt) override {
-        auto state_work = state.clone();
-        auto info = solve_robust(model, *state_work, dt);
-        return info.cumulative_delta; 
-    }
-
-    static ConvergenceInfo solve_robust(const IModel& model, IState& state, double dt, 
-                                        double tolerance = 1e-4, int max_iter = 12) {
-        auto state_old = state.clone();
-        Vector total_delta;
-
-        for (int iter = 0; iter < max_iter; ++iter) {
-            Vector R = model.build_residual(state, *state_old, dt);
-            double norm = 0; 
-            #pragma omp parallel for reduction(+:norm)
-            for (int i = 0; i < (int)R.size(); ++i) norm += R[i] * R[i];
-            norm = std::sqrt(norm);
-            
-            if (iter == 0) total_delta = Vector(R.size(), 0.0);
-            if (norm < tolerance) return {true, iter, norm, total_delta};
-
-            Vector delta;
-            SparseMatrix S = model.build_sparse_jacobian(state, dt);
-            
-            if (S.rows > 0) {
-                // High-performance Sparse Solve
-                delta = BiCGSTABSolver::solve(S, scale_parallel(R, -1.0), 1e-8, 1000, true);
-            } else {
-                // Legacy Dense Solve (Slow)
-                Matrix J = model.build_jacobian(state, dt);
-                LUSolver lu;
-                delta = lu.solve_system(J, scale(R, -1.0));
-            }
-            
-            double omega = 1.0;
-            double norm_initial = norm;
-            bool descent_found = false;
-
-            for (int ls = 0; ls < 6; ++ls) {
-                auto state_trial = state.clone();
-                state_trial->update(scale_parallel(delta, omega));
-                
-                Vector R_trial = model.build_residual(*state_trial, *state_old, dt);
-                double norm_trial = 0;
-                #pragma omp parallel for reduction(+:norm_trial)
-                for (int i = 0; i < (int)R_trial.size(); ++i) norm_trial += R_trial[i] * R_trial[i];
-                norm_trial = std::sqrt(norm_trial);
-                
-                if (norm_trial < norm_initial * 0.999) { 
-                    Vector step = scale_parallel(delta, omega);
-                    state.update(step);
-                    #pragma omp parallel for
-                    for (int i = 0; i < (int)total_delta.size(); i++) total_delta[i] += step[i];
-                    norm = norm_trial;
-                    descent_found = true;
-                    break;
-                }
-                omega *= 0.25;
-            }
-
-            if (!descent_found) {
-                Vector step = scale_parallel(delta, 0.001);
-                state.update(step);
-                #pragma omp parallel for
-                for (int i = 0; i < (int)total_delta.size(); i++) total_delta[i] += step[i];
-            }
-            
-            std::cout << "  Iter " << iter << ": Norm = " << norm << " (Omega = " << omega << ")" << std::endl;
-        }
-        return {false, max_iter, 0.0, total_delta};
-    }
-
-private:
-    static Vector scale_parallel(const Vector& v, double s) {
-        Vector res = v;
         #pragma omp parallel for
-        for (int i = 0; i < (int)res.size(); ++i) res[i] *= s;
-        return res;
-    }
-
-    static Vector scale(const Vector& v, double s) {
-        Vector res = v;
-        for (double& x : res) x *= s;
-        return res;
+        for (int i = 0; i < (int)a.size(); i++) a[i] *= s;
+        return a;
     }
 };
 

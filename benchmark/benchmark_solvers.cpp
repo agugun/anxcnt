@@ -9,7 +9,7 @@
 #include <omp.h>
 #include "lib/modules.hpp"
 #include "lib/sparse.hpp"
-#include "lib/iterative_solvers.hpp"
+#include "lib/solvers.hpp"
 
 using namespace top;
 using namespace num;

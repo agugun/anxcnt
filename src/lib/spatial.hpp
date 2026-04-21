@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file spatial.hpp
  * @brief Geometric Language for Mesh-based Simulations.
@@ -18,26 +19,28 @@
  * to understand the spatial context without being tightly coupled 
  * to a specific physics implementation.
  */
-#pragma once
-#include <cstddef>
+#include "interfaces.hpp"
 
 namespace top {
 
 /**
  * @brief 1D Spatial Grid Metadata.
  */
-struct Spatial1D {
+class Spatial1D : public IGrid {
+public:
     size_t nx;
     double dx;
 
     Spatial1D(size_t nx, double dx) : nx(nx), dx(dx) {}
     size_t total_size() const { return nx; }
+    size_t get_total_cells() const override { return nx; }
 };
 
 /**
  * @brief 2D Spatial Grid Metadata.
  */
-struct Spatial2D {
+class Spatial2D : public IGrid {
+public:
     size_t nx, ny;
     double dx, dy;
 
@@ -45,6 +48,7 @@ struct Spatial2D {
         : nx(nx), ny(ny), dx(dx), dy(dy) {}
 
     size_t total_size() const { return nx * ny; }
+    size_t get_total_cells() const override { return nx * ny; }
     
     size_t idx(size_t i, size_t j) const { 
         return j * nx + i; 
@@ -54,7 +58,8 @@ struct Spatial2D {
 /**
  * @brief 3D Spatial Grid Metadata.
  */
-struct Spatial3D {
+class Spatial3D : public IGrid {
+public:
     size_t nx, ny, nz;
     double dx, dy, dz;
 
@@ -62,6 +67,7 @@ struct Spatial3D {
         : nx(nx), ny(ny), nz(nz), dx(dx), dy(dy), dz(dz) {}
 
     size_t total_size() const { return nx * ny * nz; }
+    size_t get_total_cells() const override { return nx * ny * nz; }
 
     size_t idx(size_t i, size_t j, size_t k) const { 
         return (k * ny + j) * nx + i; 

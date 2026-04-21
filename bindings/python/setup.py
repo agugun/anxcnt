@@ -4,7 +4,7 @@ import os
 
 # Define the C++ extension module
 ext_module = Pybind11Extension(
-    "cnt",
+    "axcnt_cpp",
     ["python_bridge.cpp"],
     include_dirs=[
         os.path.abspath("../../src"), # To find case/ and lib/
@@ -13,7 +13,7 @@ ext_module = Pybind11Extension(
 )
 
 setup(
-    name="cnt",
+    name="axcnt_cpp",
     version="0.1.0",
     ext_modules=[ext_module],
     cmdclass={"build_ext": build_ext},

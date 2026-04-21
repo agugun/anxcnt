@@ -10,42 +10,45 @@ PYTHON_VENV = .venv/bin/python
 
 # Compiler
 CXX = g++
-CXX_FLAGS = -std=c++14 -O3 -fopenmp -I$(SRC_DIR)
+CXX_FLAGS = -std=c++17 -O3 -fopenmp -I$(SRC_DIR)
 
 # Targets
-.PHONY: all mod bindings clean mod_clean bindings_clean heat_1d_implicit pressure_sim heat_1d_explicit wave heat_2d_implicit heat_3d_implicit mba reservoir_1d reservoir_2d reservoir_3d reservoir_dual_2d reservoir_oil_gas_2d reservoir_black_oil_2d reservoir_black_oil_3d python_inplace build_physics
+.PHONY: all mod bindings clean mod_clean bindings_clean heat_1d_implicit pressure_sim heat_1d_explicit wave_1d heat_2d_implicit heat_3d_implicit mba reservoir_1d reservoir_2d reservoir_3d reservoir_dual_2d reservoir_oil_gas_2d reservoir_black_oil_2d reservoir_black_oil_3d burgers_fdm fluid_fem wave_2d python_inplace build_physics
 
 all: mod bindings
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
-	mkdir -p $(EXPORTS_DIR)
 
-mod: heat_1d_implicit heat_1d_explicit pressure_sim wave heat_2d_implicit heat_3d_implicit mba reservoir_1d reservoir_2d reservoir_3d reservoir_dual_2d reservoir_oil_gas_2d reservoir_black_oil_2d reservoir_black_oil_3d
+mod: heat_1d_implicit heat_1d_explicit pressure_sim wave_1d heat_2d_implicit heat_3d_implicit mba reservoir_1d reservoir_2d reservoir_3d reservoir_dual_2d reservoir_oil_gas_2d reservoir_black_oil_2d reservoir_black_oil_3d burgers_fdm fluid_fem wave_2d
 
 heat_1d_implicit: $(BUILD_DIR)
 	@echo "Building Heat Simulation (Implicit) C++ Executable..."
-	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/heat/1d_implicit/main.cpp -o $(BUILD_DIR)/heat_1d_implicit
+	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/thermodynamics/heat/1d_implicit/main.cpp -o $(BUILD_DIR)/heat_1d_implicit
 
 heat_1d_explicit: $(BUILD_DIR)
 	@echo "Building Heat Simulation (Explicit) C++ Executable..."
-	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/heat/1d_explicit/main.cpp -o $(BUILD_DIR)/heat_1d_explicit
+	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/thermodynamics/heat/1d_explicit/main.cpp -o $(BUILD_DIR)/heat_1d_explicit
 
 pressure_sim: $(BUILD_DIR)
 	@echo "Building Pressure Simulation C++ Executable..."
 	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/pressure/1d/main.cpp -o $(BUILD_DIR)/pressure_sim
 
-wave: $(BUILD_DIR)
-	@echo "Building Wave Simulation C++ Executable..."
-	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/wave/1d/main.cpp -o $(BUILD_DIR)/wave
+wave_1d: $(BUILD_DIR)
+	@echo "Building 1D Wave Simulation C++ Executable..."
+	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/wave/1d/main.cpp -o $(BUILD_DIR)/wave_1d
+
+wave_2d: $(BUILD_DIR)
+	@echo "Building 2D Wave Equation Simulation (FDM) C++ Executable..."
+	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/wave/2d/main.cpp -o $(BUILD_DIR)/wave_2d
 
 heat_2d_implicit: $(BUILD_DIR)
 	@echo "Building 2D Heat Simulation (Implicit) C++ Executable..."
-	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/heat/2d_implicit/main.cpp -o $(BUILD_DIR)/heat_2d_implicit
+	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/thermodynamics/heat/2d_implicit/main.cpp -o $(BUILD_DIR)/heat_2d_implicit
 
 heat_3d_implicit: $(BUILD_DIR)
 	@echo "Building 3D Heat Simulation (Implicit) C++ Executable..."
-	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/heat/3d_implicit/main.cpp -o $(BUILD_DIR)/heat_3d_implicit
+	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/thermodynamics/heat/3d_implicit/main.cpp -o $(BUILD_DIR)/heat_3d_implicit
 
 mba: $(BUILD_DIR)
 	@echo "Building Material Balance Simulation C++ Executable..."
@@ -78,6 +81,15 @@ reservoir_black_oil_2d: $(BUILD_DIR)
 reservoir_black_oil_3d: $(BUILD_DIR)
 	@echo "Building 3D Black Oil Reservoir Simulation C++ Executable..."
 	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/reservoir/black_oil_3d/main.cpp -o $(BUILD_DIR)/reservoir_black_oil_3d
+
+burgers_fdm: $(BUILD_DIR)
+	@echo "Building 1D Burgers' Equation Simulation (FDM) C++ Executable..."
+	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/fluids/burgers/main.cpp -o $(BUILD_DIR)/burgers_fdm
+
+fluid_fem: $(BUILD_DIR)
+	@echo "Building 2D Fluid Dynamics Simulation (FEM) C++ Executable..."
+	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/fluids/fluid_dynamics/main.cpp -o $(BUILD_DIR)/fluid_fem
+
 
 build_physics: $(BUILD_DIR)
 	@echo "Building physics module: $(PHYSICS)..."

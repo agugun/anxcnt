@@ -1,0 +1,6 @@
+{
+    "id": "wave",
+    "title": "Wave Propagator",
+    "icon": "bi-reception-4",
+    "description": "Seismic & Acoustic Wavefield Visualization"
+}

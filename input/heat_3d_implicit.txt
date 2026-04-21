@@ -1,11 +1,17 @@
-# Heat 3D Implicit Simulation Parameters
-nx = 21
-ny = 21
-nz = 21
-dx = 0.5
-dy = 0.5
-dz = 0.5
-alpha = 0.1
+# Export Configuration
+export_dir = exports
+project_name = heat_3d_im
+enable_vtk = 1
+enable_json = 0
+enable_csv = 1
+
+# Parameters
+nx = 10
+ny = 10
+nz = 10
+alpha = 0.01
+dx = 1.0
+dy = 1.0
+dz = 1.0
 dt = 0.1
-t_end = 2.0
-enable_vtk = 0
+t_end = 1.0

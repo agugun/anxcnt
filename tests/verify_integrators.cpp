@@ -155,7 +155,7 @@ int main() {
     run_benchmark("Implicit Euler (CG)", ie, model, &cg_solver, y0, dt, steps);
 
     FullyImplicitIntegrator fi;
-    run_benchmark("Fully Implicit", fi, model, nullptr, y0, dt, steps);
+    run_benchmark("Fully Implicit (CG)", fi, model, &cg_solver, y0, dt, steps);
 
     // Domain Specific Integration
     test_reservoir_impes();

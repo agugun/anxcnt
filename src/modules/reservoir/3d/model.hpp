@@ -1,216 +1,125 @@
 #pragma once
-#include "lib/modules.hpp"
+#include "lib/interfaces.hpp"
 #include "state.hpp"
-#include "lib/operators.hpp"
+#include "lib/discretization.hpp"
 #include "modules/reservoir/well.hpp"
-#include <cmath>
-#include <vector>
-
+ 
 namespace mod {
 using namespace top;
 namespace reservoir {
 
+/**
+ * @brief 3D Reservoir Physical Model (Properties).
+ */
 class Reservoir3DModel : public IModel {
-private:
-    double k;      // permeability [mD]
-    double phi;    // porosity [fraction]
-    double mu;     // viscosity [cP]
-    double ct;     // total compressibility [psi^-1]
-    double B;      // formation volume factor [rb/stb]
-    
-    std::vector<std::shared_ptr<ISourceSink>> sources;
-
-    double diffusivity; 
-
 public:
-    Reservoir3DModel(double k_val, double phi_val, double mu_val, double ct_val, 
-                     double B_val, const std::vector<std::shared_ptr<ISourceSink>>& sources_val)
-        : k(k_val), phi(phi_val), mu(mu_val), ct(ct_val), B(B_val), 
-          sources(sources_val) {
-        
-        diffusivity = 0.0002637 * k / (phi * mu * ct);
+    std::shared_ptr<num::discretization::Conductance3D> cond;
+    Vector storage_coeff;
+    std::vector<std::shared_ptr<ISourceSink>> wells;
+
+    Reservoir3DModel(std::shared_ptr<num::discretization::Conductance3D> c, const Vector& storage, 
+                     const std::vector<std::shared_ptr<ISourceSink>>& wells_val)
+        : cond(c), storage_coeff(storage), wells(wells_val) {}
+
+    double get_tolerance() const override { return 1e-4; }
+
+    Vector get_accumulation_weights(const IGrid& grid, const IState& state) const override {
+        return storage_coeff;
     }
 
-    Vector evaluate_rhs(const IState& state) const override {
-        const auto& r_state = dynamic_cast<const Reservoir3DState&>(state);
-        int nx = r_state.spatial.nx, ny = r_state.spatial.ny, nz = r_state.spatial.nz;
-        double dx = r_state.spatial.dx, dy = r_state.spatial.dy, dz = r_state.spatial.dz;
-        
-        Vector rhs(r_state.pressures.size(), 0.0);
-        double inv_dx2 = 1.0 / (dx * dx);
-        double inv_dy2 = 1.0 / (dy * dy);
-        double inv_dz2 = 1.0 / (dz * dz);
+    const std::vector<std::shared_ptr<ISourceSink>>& get_sources() const {
+        return wells;
+    }
+};
 
-        #pragma omp parallel for collapse(3)
+/**
+ * @brief 3D Reservoir FVM Discretizer.
+ */
+class Reservoir3DDiscretizer : public IDiscretizer {
+public:
+    void assemble_jacobian(const IGrid& grid, const IModel& model, const IState& state, SparseMatrix& J) const override {
+        const auto& r_model = static_cast<const Reservoir3DModel&>(model);
+        const auto& r_state = static_cast<const Reservoir3DState&>(state);
+        int nx = (int)r_state.spatial->nx;
+        int ny = (int)r_state.spatial->ny;
+        int nz = (int)r_state.spatial->nz;
+        int n = nx * ny * nz;
+
+        if (J.rows != n) J = SparseMatrix(n, n);
+        J.triplets.clear();
+
         for (int k = 0; k < nz; ++k) {
             for (int j = 0; j < ny; ++j) {
                 for (int i = 0; i < nx; ++i) {
-                    int cur = r_state.idx(i, j, k);
-                    double p_cur = r_state.pressures[cur];
-                    double p_w = (i == 0) ? p_cur : r_state.pressures[r_state.idx(i-1, j, k)];
-                    double p_e = (i == nx - 1) ? p_cur : r_state.pressures[r_state.idx(i+1, j, k)];
-                    double p_s = (j == 0) ? p_cur : r_state.pressures[r_state.idx(i, j-1, k)];
-                    double p_n = (j == ny - 1) ? p_cur : r_state.pressures[r_state.idx(i, j+1, k)];
-                    double p_b = (k == 0) ? p_cur : r_state.pressures[r_state.idx(i, j, k-1)];
-                    double p_t = (k == nz - 1) ? p_cur : r_state.pressures[r_state.idx(i, j, k+1)];
-
-                    double lap_p = (p_e - 2.0 * p_cur + p_w) * inv_dx2 + 
-                                   (p_n - 2.0 * p_cur + p_s) * inv_dy2 + 
-                                   (p_t - 2.0 * p_cur + p_b) * inv_dz2;
-                    rhs[cur] = diffusivity * lap_p;
-                }
-            }
-        }
-
-        for (auto& s : sources) {
-            s->apply(rhs, nullptr, r_state, 0.0, nullptr);
-        }
-
-        return rhs;
-    }
-
-    Vector build_residual(const IState& s_new, const IState& s_old, double dt) const override {
-        const auto& r_new = dynamic_cast<const Reservoir3DState&>(s_new);
-        const auto& r_old = dynamic_cast<const Reservoir3DState&>(s_old);
-        int nx = r_new.spatial.nx, ny = r_new.spatial.ny, nz = r_new.spatial.nz;
-        double dx = r_new.spatial.dx, dy = r_new.spatial.dy, dz = r_new.spatial.dz;
-        
-        Vector res(r_new.pressures.size());
-        double tx = diffusivity * dt / (dx * dx);
-        double ty = diffusivity * dt / (dy * dy);
-        double tz = diffusivity * dt / (dz * dz);
-
-        #pragma omp parallel for collapse(3)
-        for (int k = 0; k < nz; ++k) {
-            for (int j = 0; j < ny; ++j) {
-                for (int i = 0; i < nx; ++i) {
-                    int cur = r_new.idx(i, j, k);
-                    double p_cur = r_new.pressures[cur];
-                    double p_w = (i == 0) ? p_cur : r_new.pressures[r_new.idx(i-1, j, k)];
-                    double p_e = (i == nx - 1) ? p_cur : r_new.pressures[r_new.idx(i+1, j, k)];
-                    double p_s = (j == 0) ? p_cur : r_new.pressures[r_new.idx(i, j-1, k)];
-                    double p_n = (j == ny - 1) ? p_cur : r_new.pressures[r_new.idx(i, j+1, k)];
-                    double p_b = (k == 0) ? p_cur : r_new.pressures[r_new.idx(i, j, k-1)];
-                    double p_t = (k == nz - 1) ? p_cur : r_new.pressures[r_new.idx(i, j, k+1)];
-
-                    double lap_p = (p_e - 2.0 * p_cur + p_w) * tx + 
-                                   (p_n - 2.0 * p_cur + p_s) * ty + 
-                                   (p_t - 2.0 * p_cur + p_b) * tz;
-                    res[cur] = p_cur - r_old.pressures[cur] - lap_p;
-                }
-            }
-        }
-
-        Vector well_contributions(res.size(), 0.0);
-        for (auto& s : sources) {
-            s->apply(well_contributions, nullptr, r_new, dt);
-        }
-        #pragma omp parallel for
-        for (int i = 0; i < (int)res.size(); ++i) {
-            res[i] += dt * well_contributions[i]; 
-        }
-
-        return res;
-    }
-
-    SparseMatrix build_sparse_jacobian(const IState& state, double dt) const override {
-        const auto& r_state = dynamic_cast<const Reservoir3DState&>(state);
-        int nx = r_state.spatial.nx, ny = r_state.spatial.ny, nz = r_state.spatial.nz;
-        double dx = r_state.spatial.dx, dy = r_state.spatial.dy, dz = r_state.spatial.dz;
-        int n = (int)r_state.pressures.size();
-        
-        double tx = diffusivity * dt / (dx * dx);
-        double ty = diffusivity * dt / (dy * dy);
-        double tz = diffusivity * dt / (dz * dz);
-
-        std::vector<SparseMatrix::Entry> entries;
-        #pragma omp parallel
-        {
-            std::vector<SparseMatrix::Entry> local_entries;
-            #pragma omp for
-            for (int k = 0; k < nz; ++k) {
-                for (int j = 0; j < ny; ++j) {
-                    for (int i = 0; i < nx; ++i) {
-                        int cur = r_state.idx(i, j, k);
-                        local_entries.push_back({cur, cur, 1.0 + 2.0*tx + 2.0*ty + 2.0*tz});
-                        
-                        if (i > 0)      local_entries.push_back(SparseMatrix::Entry{cur, r_state.idx(i-1, j, k), -tx});
-                        else            local_entries.back().v -= tx;
-                        
-                        if (i < nx - 1) local_entries.push_back(SparseMatrix::Entry{cur, r_state.idx(i+1, j, k), -tx});
-                        else            local_entries.back().v -= tx;
-                        
-                        if (j > 0)      local_entries.push_back(SparseMatrix::Entry{cur, r_state.idx(i, j-1, k), -ty});
-                        else            local_entries.back().v -= ty;
-                        
-                        if (j < ny - 1) local_entries.push_back(SparseMatrix::Entry{cur, r_state.idx(i, j+1, k), -ty});
-                        else            local_entries.back().v -= ty;
-
-                        if (k > 0)      local_entries.push_back(SparseMatrix::Entry{cur, r_state.idx(i, j, k-1), -tz});
-                        else            local_entries.back().v -= tz;
-                        
-                        if (k < nz - 1) local_entries.push_back(SparseMatrix::Entry{cur, r_state.idx(i, j, k+1), -tz});
-                        else            local_entries.back().v -= tz;
+                    int cur = r_state.spatial->idx(i, j, k);
+                    double diag = 0.0;
+                    
+                    if (i > 0) {
+                        double t = r_model.cond->Tx[(k * ny + j) * (nx - 1) + i - 1];
+                        diag += t;
+                        J.triplets.push_back({cur, (int)r_state.spatial->idx(i - 1, j, k), -t});
                     }
+                    if (i < nx - 1) {
+                        double t = r_model.cond->Tx[(k * ny + j) * (nx - 1) + i];
+                        diag += t;
+                        J.triplets.push_back({cur, (int)r_state.spatial->idx(i + 1, j, k), -t});
+                    }
+                    if (j > 0) {
+                        double t = r_model.cond->Ty[(k * (ny - 1) + j - 1) * nx + i];
+                        diag += t;
+                        J.triplets.push_back({cur, (int)r_state.spatial->idx(i, j - 1, k), -t});
+                    }
+                    if (j < ny - 1) {
+                        double t = r_model.cond->Ty[(k * (ny - 1) + j) * nx + i];
+                        diag += t;
+                        J.triplets.push_back({cur, (int)r_state.spatial->idx(i, j + 1, k), -t});
+                    }
+                    if (k > 0) {
+                        double t = r_model.cond->Tz[((k - 1) * ny + j) * nx + i];
+                        diag += t;
+                        J.triplets.push_back({cur, (int)r_state.spatial->idx(i, j, k - 1), -t});
+                    }
+                    if (k < nz - 1) {
+                        double t = r_model.cond->Tz[(k * ny + j) * nx + i];
+                        diag += t;
+                        J.triplets.push_back({cur, (int)r_state.spatial->idx(i, j, k + 1), -t});
+                    }
+                    
+                    J.triplets.push_back({cur, cur, diag});
                 }
             }
-            #pragma omp critical
-            {
-                entries.insert(entries.end(), local_entries.begin(), local_entries.end());
-            }
         }
-        Vector dummy_res(n, 0.0);
-        for (auto& s : sources) {
-            s->apply(dummy_res, nullptr, r_state, dt, &entries);
-        }
-        return SparseMatrix::from_triplets(n, n, entries);
     }
 
-    Matrix build_jacobian(const IState& state, double dt) const override {
-        SparseMatrix S = build_sparse_jacobian(state, dt);
-        Matrix J(S.rows, Vector(S.cols, 0.0));
-        for (int i = 0; i < S.rows; ++i) {
-            for (int k = S.row_ptr[i]; k < S.row_ptr[i + 1]; ++k) {
-                J[i][S.col_indices[k]] = S.values[k];
-            }
-        }
-        return J;
-    }
+    void assemble_residual(const IGrid& grid, const IModel& model, const IState& state, Vector& R) const override {
+        const auto& r_model = static_cast<const Reservoir3DModel&>(model);
+        const auto& r_state = static_cast<const Reservoir3DState&>(state);
+        int nx = (int)r_state.spatial->nx;
+        int ny = (int)r_state.spatial->ny;
+        int nz = (int)r_state.spatial->nz;
 
-    Vector apply_jacobian(const IState& state, const Vector& v, double dt) const override {
-        const auto& r_state = dynamic_cast<const Reservoir3DState&>(state);
-        int nx = r_state.spatial.nx, ny = r_state.spatial.ny, nz = r_state.spatial.nz;
-        double dx = r_state.spatial.dx, dy = r_state.spatial.dy, dz = r_state.spatial.dz;
-        
-        double tx = diffusivity * dt / (dx * dx);
-        double ty = diffusivity * dt / (dy * dy);
-        double tz = diffusivity * dt / (dz * dz);
-
-        Vector res(v.size());
         #pragma omp parallel for collapse(3)
         for (int k = 0; k < nz; ++k) {
             for (int j = 0; j < ny; ++j) {
                 for (int i = 0; i < nx; ++i) {
-                    int cur = r_state.idx(i, j, k);
+                    int cur = r_state.spatial->idx(i, j, k);
+                    double net_flux = 0.0;
                     
-                    // (I - dt * eta * L) * v
-                    double v_cur = v[cur];
-                    double v_w = (i == 0) ? v_cur : v[r_state.idx(i-1, j, k)];
-                    double v_e = (i == nx - 1) ? v_cur : v[r_state.idx(i+1, j, k)];
-                    double v_s = (j == 0) ? v_cur : v[r_state.idx(i, j-1, k)];
-                    double v_n = (j == ny - 1) ? v_cur : v[r_state.idx(i, j+1, k)];
-                    double v_b = (k == 0) ? v_cur : v[r_state.idx(i, j, k-1)];
-                    double v_t = (k == nz - 1) ? v_cur : v[r_state.idx(i, j, k+1)];
+                    if (i > 0) net_flux += r_model.cond->Tx[(k * ny + j) * (nx - 1) + i - 1] * (r_state.pressures[r_state.spatial->idx(i - 1, j, k)] - r_state.pressures[cur]);
+                    if (i < nx - 1) net_flux += r_model.cond->Tx[(k * ny + j) * (nx - 1) + i]   * (r_state.pressures[r_state.spatial->idx(i + 1, j, k)] - r_state.pressures[cur]);
+                    if (j > 0) net_flux += r_model.cond->Ty[(k * (ny - 1) + j - 1) * nx + i] * (r_state.pressures[r_state.spatial->idx(i, j - 1, k)] - r_state.pressures[cur]);
+                    if (j < ny - 1) net_flux += r_model.cond->Ty[(k * (ny - 1) + j) * nx + i]     * (r_state.pressures[r_state.spatial->idx(i, j + 1, k)] - r_state.pressures[cur]);
+                    if (k > 0) net_flux += r_model.cond->Tz[((k - 1) * ny + j) * nx + i]     * (r_state.pressures[r_state.spatial->idx(i, j, k - 1)] - r_state.pressures[cur]);
+                    if (k < nz - 1) net_flux += r_model.cond->Tz[(k * ny + j) * nx + i]           * (r_state.pressures[r_state.spatial->idx(i, j, k + 1)] - r_state.pressures[cur]);
                     
-                    double d2v_dx2_dt_eta = (v_e - 2.0 * v_cur + v_w) * tx;
-                    double d2v_dy2_dt_eta = (v_n - 2.0 * v_cur + v_s) * ty;
-                    double d2v_dz2_dt_eta = (v_t - 2.0 * v_cur + v_b) * tz;
-                    
-                    res[cur] = v_cur - (d2v_dx2_dt_eta + d2v_dy2_dt_eta + d2v_dz2_dt_eta);
+                    R[cur] = -net_flux;
                 }
             }
         }
-        return res;
+    }
+
+    void apply_boundary_conditions(const IGrid& grid, const IModel& model, const IState& state, SparseMatrix& J, Vector& R) const override {
+        // No-flow is default.
     }
 };
 

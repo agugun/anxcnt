@@ -1,31 +1,31 @@
 #pragma once
 #include "lib/spatial.hpp"
-#include "lib/modules.hpp"
+#include "lib/interfaces.hpp"
 #include <vector>
 #include <memory>
 
-namespace mod {
+namespace mod::reservoir {
 using namespace top;
-namespace reservoir {
 
+/**
+ * @brief State representing a 3D Single-Phase Reservoir (Pressure).
+ */
 class Reservoir3DState : public IState {
 public:
-    std::vector<double> pressures; // [psi]
-    Spatial3D spatial;
+    Vector pressures; // [psi]
+    std::shared_ptr<Spatial3D> spatial;
 
-    Reservoir3DState(Spatial3D spatial, double initial_p)
-        : spatial(spatial), pressures(spatial.nx * spatial.ny * spatial.nz, initial_p) {}
+    Reservoir3DState(std::shared_ptr<Spatial3D> s, double initial_p)
+        : spatial(s), pressures(s->nx * s->ny * s->nz, initial_p) {}
 
-    size_t size() const { return pressures.size(); }
-    
-    int idx(int i, int j, int k) const { 
-        return spatial.idx(i, j, k);
-    }
-
-    void update(const Vector& delta) override {
+    void apply_update(const top::Vector& delta) override {
         for (size_t i = 0; i < pressures.size(); ++i) {
             pressures[i] += delta[i];
         }
+    }
+
+    top::Vector to_vector() const override {
+        return pressures;
     }
 
     std::unique_ptr<IState> clone() const override {
@@ -35,5 +35,4 @@ public:
     }
 };
 
-} // namespace reservoir
-} // namespace mod
+} // namespace mod::reservoir

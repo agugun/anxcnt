@@ -1,6 +1,6 @@
 #pragma once
 #include "lib/spatial.hpp"
-#include "lib/modules.hpp"
+#include "lib/interfaces.hpp"
 
 namespace mod {
 using namespace top;
@@ -10,13 +10,12 @@ class Wave1DState : public IState {
 public:
     Vector u; // Displacement
     Vector v; // Velocity
-    Spatial1D spatial;
+    std::shared_ptr<Spatial1D> spatial;
 
-    Wave1DState(Spatial1D spatial, double initial_displacement = 0.0) 
-        : u(spatial.nx, initial_displacement), v(spatial.nx, 0.0), spatial(spatial) {}
+    Wave1DState(std::shared_ptr<Spatial1D> s, double initial_displacement = 0.0) 
+        : u(s->nx, initial_displacement), v(s->nx, 0.0), spatial(s) {}
 
-    void update(const Vector& delta) override {
-        // Assume delta is concatenated: [delta_u, delta_v]
+    void apply_update(const std::vector<double>& delta) override {
         size_t n = u.size();
         for (size_t i = 0; i < n; ++i) {
             u[i] += delta[i];
@@ -24,15 +23,7 @@ public:
         }
     }
 
-    std::unique_ptr<IState> clone() const override {
-        auto copy = std::make_unique<Wave1DState>(spatial, 0.0);
-        copy->u = this->u;
-        copy->v = this->v;
-        return copy;
-    }
-
-    // Helper to get concatenated state for RHS evaluation
-    Vector get_combined() const {
+    std::vector<double> to_vector() const override {
         size_t n = u.size();
         Vector combined(2 * n);
         for (size_t i = 0; i < n; ++i) {
@@ -41,14 +32,12 @@ public:
         }
         return combined;
     }
-    
-    // Helper to set state from combined vector
-    void set_combined(const Vector& combined) {
-        size_t n = u.size();
-        for (size_t i = 0; i < n; ++i) {
-            u[i] = combined[i];
-            v[i] = combined[i + n];
-        }
+
+    std::unique_ptr<IState> clone() const override {
+        auto copy = std::make_unique<Wave1DState>(spatial, 0.0);
+        copy->u = this->u;
+        copy->v = this->v;
+        return copy;
     }
 };
 

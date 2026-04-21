@@ -1,7 +1,13 @@
-# Wave 1D Simulation Parameters
+# Export Configuration
+export_dir = exports
+project_name = wave_1d
+enable_vtk = 1
+enable_json = 0
+enable_csv = 1
+
+# Parameters
 nx = 100
-dx = 0.1
+dx = 1.0
+dt = 0.5
+t_end = 50.0
 c = 1.0
-t_end = 10.0
-dt = 0.01
-enable_csv = 0

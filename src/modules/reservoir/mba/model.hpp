@@ -1,53 +1,49 @@
 #pragma once
-#include "lib/modules.hpp"
+#include "lib/interfaces.hpp"
 #include "state.hpp"
 
-namespace mod {
+namespace mod::reservoir {
 using namespace top;
-namespace physics_mba {
 
 /**
- * @brief Material Balance Model (Zero-Dimensional / Tank Model).
- * 
- * Governing Equation:
- *   dP/dt = -q / (V * ct)
- * 
- * Physical Logic:
- *   Predicts average reservoir pressure decline over time based on cumulative 
- *   production. It treats the reservoir as a single homogeneous tank.
- *   - V: Total reservoir volume (barrels).
- *   - ct: Total system compressibility (1/psi).
- *   - q: Constant production rate (STB/day).
- * 
- * Numerical Logic:
- *   This is a first-order ODE. While the RHS is constant in this implementation, 
- *   it can be evolved into more complex forms (e.g., pressure-dependent rate).
- * 
- * Assumptions:
- *   - Homogeneous properties.
- *   - Instantaneous pressure equilibrium throughout the tank.
- *   - Single-phase fluid or effective total compressibility.
+ * @brief Material Balance Model (Physical Properties).
  */
-class MBModel : public IModel {
-private:
-    double volume; // Reservoir Volume (barrels)
-    double ct;     // Total Compressibility (1/psi)
-    double q;      // Production Rate (STB/day)
-
+class MBAModel : public IModel {
 public:
-    MBModel(double V, double ct, double q) : volume(V), ct(ct), q(q) {}
+    double volume; 
+    double ct;     
+    double q;      
 
-    // dP/dt = -q / (V * ct)
-    Vector evaluate_rhs(const IState& state) const override {
-        Vector rhs(1);
-        rhs[0] = -q / (volume * ct);
-        return rhs;
+    MBAModel(double V, double ct_val, double q_val) : volume(V), ct(ct_val), q(q_val) {}
+
+    double get_tolerance() const override { return 1e-4; }
+
+    Vector get_accumulation_weights(const IGrid& grid, const IState& state) const override {
+        return { volume * ct }; // Accumulation is volume * ct * dP
     }
-
-    // Placeholders for implicit methods (not strictly needed for this simple linear ODE)
-    Vector build_residual(const IState&, const IState&, double) const override { return {}; }
-    Matrix build_jacobian(const IState&, double) const override { return {}; }
 };
 
-} // namespace physics_mba
-} // namespace mod
+/**
+ * @brief MBA (0D) Discretizer (Numerical Assembly).
+ * Implements d(V*ct*P)/dt = -q.
+ */
+class MBADiscretizer : public IDiscretizer {
+public:
+    void assemble_jacobian(const IGrid& grid, const IModel& model, const IState& state, SparseMatrix& J) const override {
+        if (J.rows != 1) J = SparseMatrix(1, 1);
+        J.triplets.clear();
+        // For dP/dt = -q/(V*ct), J is 0 (rate is constant)
+        // But for the linear system in NewtonRaphson: J is just the 0-matrix which is fine.
+    }
+
+    void assemble_residual(const IGrid& grid, const IModel& model, const IState& state, Vector& R) const override {
+        const auto& m = static_cast<const MBAModel&>(model);
+        R[0] = m.q; // Residual is Flux - Rate. Flux=0.
+    }
+
+    void apply_boundary_conditions(const IGrid& grid, const IModel& model, const IState& state, SparseMatrix& J, Vector& R) const override {
+        // No boundaries for 0D tank.
+    }
+};
+
+} // namespace mod::reservoir

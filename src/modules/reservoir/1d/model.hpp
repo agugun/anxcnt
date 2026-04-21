@@ -1,116 +1,83 @@
 #pragma once
-#include "lib/modules.hpp"
+#include "lib/interfaces.hpp"
 #include "state.hpp"
-#include "lib/operators.hpp"
+#include "lib/discretization.hpp"
 #include "modules/reservoir/well.hpp"
-#include <cmath>
-#include <vector>
 
 namespace mod {
 using namespace top;
 namespace reservoir {
 
 /**
- * @brief Classical 1D Pressure Diffusivity Reservoir Model.
- * 
- * Governing Equation:
- *   d^2P/dx^2 = (1 / eta) * dP/dt
- * 
- * Physical Logic:
- *   Models single-phase fluid flow in a porous medium. This is the 1D line-source 
- *   solution equivalent.
- *   - eta: Hydraulic diffusivity = 0.0002637 * k / (phi * mu * ct) [ft^2/hr]
- * 
- * Discretization:
- *   - Spatial: 2nd Order Central Difference for Laplacian.
- *   - Temporal: Backward Euler (Implicit) method.
- * 
- * Boundary Conditions:
- *   Default behavior in the Jacobian construction implements No-flow (Neumann) 
- *   boundaries (dP/dx = 0) at both ends by assuming p_{-1} = p_0 and p_N = p_{N-1}.
+ * @brief 1D Reservoir Physical Model (Properties).
  */
 class Reservoir1DModel : public IModel {
-private:
-    // Rock/Fluid Properties
-    double k;      // permeability [mD]
-    double phi;    // porosity [fraction]
-    double mu;     // viscosity [cP]
-    double ct;     // total compressibility [psi^-1]
-    double B;      // formation volume factor [rb/stb]
-    double area;   // cross-sectional area [ft^2]
-    
-    std::vector<std::shared_ptr<ISourceSink>> sources;
-
-    double eta; // diffusivity [ft^2 / hr]
-
 public:
-    Reservoir1DModel(double k_val, double phi_val, double mu_val, double ct_val, 
-                     double B_val, double area_val, const std::vector<std::shared_ptr<ISourceSink>>& sources_val)
-        : k(k_val), phi(phi_val), mu(mu_val), ct(ct_val), 
-          B(B_val), area(area_val), sources(sources_val) {
-        
-        // Oil field units constant: 0.0002637 for ft^2/hr
-        eta = 0.0002637 * k / (phi * mu * ct);
+    std::shared_ptr<num::discretization::Conductance1D> cond;
+    Vector storage_coeff;
+    std::vector<std::shared_ptr<ISourceSink>> wells;
+
+    Reservoir1DModel(std::shared_ptr<num::discretization::Conductance1D> c, const Vector& storage, 
+                     const std::vector<std::shared_ptr<ISourceSink>>& wells_val)
+        : cond(c), storage_coeff(storage), wells(wells_val) {}
+
+    double get_tolerance() const override { return 1e-4; }
+
+    Vector get_accumulation_weights(const IGrid& grid, const IState& state) const override {
+        return storage_coeff;
     }
-
-    Vector evaluate_rhs(const IState& state) const override {
-        const auto& r_state = dynamic_cast<const Reservoir1DState&>(state);
-        Vector rhs = mop::laplace_1d(r_state.pressures, r_state.spatial.dx);
-        for (auto& v : rhs) v *= eta;
-        
-        for (auto& s : sources) {
-            s->apply(rhs, nullptr, r_state, 0.0);
-        }
-
-        return rhs;
+    
+    const std::vector<std::shared_ptr<ISourceSink>>& get_sources() const {
+        return wells;
     }
+};
 
-    Vector build_residual(const IState& s_new, const IState& s_old, double dt) const override {
-        const auto& r_new = dynamic_cast<const Reservoir1DState&>(s_new);
-        const auto& r_old = dynamic_cast<const Reservoir1DState&>(s_old);
-        
-        Vector lap = mop::laplace_1d(r_new.pressures, r_new.spatial.dx);
-        Vector res(r_new.pressures.size());
-        for (size_t i = 0; i < res.size(); ++i) {
-            res[i] = r_new.pressures[i] - r_old.pressures[i] - dt * eta * lap[i];
-        }
-
-        Vector well_contributions(res.size(), 0.0);
-        for (auto& s : sources) {
-            s->apply(well_contributions, nullptr, r_new, dt);
-        }
-        for (size_t i = 0; i < res.size(); ++i) {
-            res[i] += dt * well_contributions[i];
-        }
-
-        return res;
-    }
-
-    Matrix build_jacobian(const IState& state, double dt) const override {
-        const auto& r_state = dynamic_cast<const Reservoir1DState&>(state);
+/**
+ * @brief 1D Reservoir FVM Discretizer.
+ */
+class Reservoir1DDiscretizer : public IDiscretizer {
+public:
+    void assemble_jacobian(const IGrid& grid, const IModel& model, const IState& state, SparseMatrix& J) const override {
+        const auto& r_model = static_cast<const Reservoir1DModel&>(model);
+        const auto& r_state = static_cast<const Reservoir1DState&>(state);
         size_t n = r_state.pressures.size();
-        double dx = r_state.spatial.dx;
-        double trans = eta * dt / (dx * dx);
 
-        Matrix jac(n, Vector(n, 0.0));
-        for (size_t i = 0; i < n; ++i) {
-            jac[i][i] = 1.0 + 2.0 * trans; // Base diagonal
-            
+        if (J.rows != (int)n) J = SparseMatrix(n, n);
+        J.triplets.clear();
+
+        for (int i = 0; i < (int)n; ++i) {
+            double diag = 0.0;
             if (i > 0) {
-                jac[i][i-1] = -trans;
-            } else {
-                // Left No-flow: p_{-1} = p_0 => (p_1 - 2p_0 + p_0) terms
-                jac[i][i] -= trans; 
+                double t_prev = r_model.cond->T[i-1];
+                diag += t_prev;
+                J.triplets.push_back({i, i - 1, -t_prev});
             }
-            
-            if (i < n - 1) {
-                jac[i][i+1] = -trans;
-            } else {
-                // Right No-flow: p_{n} = p_{n-1}
-                jac[i][i] -= trans;
+            if (i < (int)n - 1) {
+                double t_next = r_model.cond->T[i];
+                diag += t_next;
+                J.triplets.push_back({i, i + 1, -t_next});
             }
+            J.triplets.push_back({i, i, diag});
         }
-        return jac;
+    }
+
+    void assemble_residual(const IGrid& grid, const IModel& model, const IState& state, Vector& R) const override {
+        const auto& r_model = static_cast<const Reservoir1DModel&>(model);
+        const auto& r_state = static_cast<const Reservoir1DState&>(state);
+        size_t n = r_state.pressures.size();
+
+        #pragma omp parallel for
+        for (int i = 0; i < (int)n; ++i) {
+            double net_flux = 0.0;
+            if (i > 0)          net_flux += r_model.cond->T[i-1] * (r_state.pressures[i-1] - r_state.pressures[i]);
+            if (i < (int)n - 1) net_flux += r_model.cond->T[i]   * (r_state.pressures[i+1] - r_state.pressures[i]);
+            R[i] = -net_flux;
+        }
+    }
+
+    void apply_boundary_conditions(const IGrid& grid, const IModel& model, const IState& state, SparseMatrix& J, Vector& R) const override {
+        // Reservoir 1D usually assumes no-flow by default in flux assembly.
+        // Dirichlet can be added here if needed.
     }
 };
 

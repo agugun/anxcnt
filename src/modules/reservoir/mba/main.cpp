@@ -1,22 +1,13 @@
 #include <omp.h>
 #include <iostream>
-#include <vector>
-#include <memory>
-#include <fstream>
-#include <iomanip>
-#include "state.hpp"
-#include "model.hpp"
-#include "lib/integrators.hpp"
-#include "lib/modules.hpp"
-#include "lib/config_reader.hpp"
+#include "simulation.hpp"
+#include "lib/utils/config_reader.hpp"
 
-using namespace num;
-using namespace mod;
-using namespace top;
-using namespace mod::physics_mba;
+using namespace mod::reservoir;
+using namespace utl;
 
 int main(int argc, char** argv) {
-    std::string config_file = "input/reservoir_mba.txt";
+    std::string config_file = "input/mba.txt";
     for (int i = 1; i < argc; ++i) {
         if (argv[i][0] != '-') {
             config_file = argv[i];
@@ -25,57 +16,22 @@ int main(int argc, char** argv) {
     }
 
     ConfigReader config;
-    config.load(config_file);
-    int num_threads = config.get("num_threads", 1);
+    if (!config.load(config_file)) {
+        std::cerr << "Failed to load config: " << config_file << "\n";
+        return 1;
+    }
+    
+    int num_threads = config.get("num_threads", 4);
     omp_set_num_threads(num_threads);
 
-    bool enable_csv = config.get("enable_csv", 0) != 0;
-    for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "--csv") enable_csv = true;
-    }
+    auto [engine, state, logger] = MBASimulationBuilder::build(config);
 
-    double pi = config.get("pi", 5000.0);
-    double N = config.get("N", 100e6);
-    double ct = config.get("ct", 1e-5);
-    double q = config.get("q", 5000.0);
-    
-    auto state = std::make_shared<MBState>(pi);
-    auto model = std::make_shared<MBModel>(N, ct, q);
-    auto integrator = std::make_shared<ForwardEulerIntegrator>();
-
-    StandardSimulator sim(model, state, nullptr, integrator);
-
-    std::cout << "Starting Material Balance (MBA) Simulation\n";
-    if (enable_csv) std::cout << "CSV Export: Enabled\n";
-
-    std::ofstream csv;
-    if (enable_csv) {
-        csv.open("exports/mba_results.csv");
-        csv << "time,pressure,cum_production\n";
-    }
-
-    auto logger = [&csv, pi, enable_csv](double t, const IState& s) {
-        static int step = 0;
-        const auto& mb_state = dynamic_cast<const MBState&>(s);
-        
-        if (step % 50 == 0) {
-            std::cout << "Day: " << std::setw(3) << (int)t 
-                      << " | Pressure: " << std::fixed << std::setprecision(1) 
-                      << mb_state.pressure << " psi\n";
-        }
-        
-        if (enable_csv && csv.is_open() && step % 10 == 0) {
-            double cum_prod = (pi - mb_state.pressure) * 1e6; // Dummy scaling
-            csv << t << "," << mb_state.pressure << "," << cum_prod << "\n";
-        }
-        step++;
-    };
-
-    double t_end = config.get("t_end", 365.0);
     double dt = config.get("dt", 1.0);
-    sim.run(t_end, dt, logger);
+    double t_end = config.get("t_end", 30.0);
 
-    if (enable_csv && csv.is_open()) csv.close();
-    std::cout << "Simulation Successful.\n";
+    std::cout << "Starting Material Balance Analysis (Tank Model) [Refactored Architecture]...\n";
+    engine->simulate(t_end, dt, std::move(state));
+
+    std::cout << "MBA Simulation Successfully Completed.\n";
     return 0;
 }

@@ -24,16 +24,10 @@ namespace num {
 class SparseMatrix {
 public:
     int rows, cols;
-    std::vector<double> values;     // Non-zero values
-    std::vector<int> col_indices;   // Column index of each non-zero
-    std::vector<int> row_ptr;       // Index in 'values' where each row starts
+    std::vector<double> values;     // CSR Values
+    std::vector<int> col_indices;   // CSR Column Indices
+    std::vector<int> row_ptr;       // CSR Row Pointers
 
-    SparseMatrix(int r, int c) : rows(r), cols(c), row_ptr(r + 1, 0) {}
-
-    /**
-     * @brief Build CSR from a list of triplets (row, col, value).
-     * Automatically handles duplicates by summing them.
-     */
     struct Entry {
         int r, c;
         double v;
@@ -43,44 +37,68 @@ public:
         }
     };
 
-    static SparseMatrix from_triplets(int r, int c, std::vector<Entry>& entries) {
-        std::sort(entries.begin(), entries.end());
+    std::vector<Entry> triplets; // Building buffer
 
-        SparseMatrix mat(r, c);
-        if (entries.empty()) return mat;
+    SparseMatrix(int r = 0, int c = 0) : rows(r), cols(c), row_ptr(r + 1, 0) {}
+
+    void clear() {
+        values.clear();
+        col_indices.clear();
+        row_ptr.assign(rows + 1, 0);
+        triplets.clear();
+    }
+
+    /**
+     * @brief Build CSR from the current triplets.
+     */
+    void compress() {
+        if (triplets.empty()) return;
+        std::sort(triplets.begin(), triplets.end());
 
         // Sum duplicates
         std::vector<Entry> compressed;
-        if (!entries.empty()) {
-            compressed.push_back(entries[0]);
-            for (size_t i = 1; i < entries.size(); ++i) {
-                if (entries[i].r == compressed.back().r && entries[i].c == compressed.back().c) {
-                    compressed.back().v += entries[i].v;
-                } else {
-                    compressed.push_back(entries[i]);
-                }
+        compressed.push_back(triplets[0]);
+        for (size_t i = 1; i < triplets.size(); ++i) {
+            if (triplets[i].r == compressed.back().r && triplets[i].c == compressed.back().c) {
+                compressed.back().v += triplets[i].v;
+            } else {
+                compressed.push_back(triplets[i]);
             }
         }
 
-        mat.values.reserve(compressed.size());
-        mat.col_indices.reserve(compressed.size());
+        values.clear();
+        col_indices.clear();
+        values.reserve(compressed.size());
+        col_indices.reserve(compressed.size());
         
+        row_ptr.assign(rows + 1, 0);
         int current_row = 0;
-        mat.row_ptr[0] = 0;
+        row_ptr[0] = 0;
         
         for (const auto& e : compressed) {
             while (current_row < e.r) {
-                mat.row_ptr[++current_row] = (int)mat.values.size();
+                row_ptr[++current_row] = (int)values.size();
             }
-            mat.values.push_back(e.v);
-            mat.col_indices.push_back(e.c);
+            values.push_back(e.v);
+            col_indices.push_back(e.c);
         }
         
-        while (current_row < r) {
-            mat.row_ptr[++current_row] = (int)mat.values.size();
+        while (current_row < rows) {
+            row_ptr[++current_row] = (int)values.size();
         }
+    }
 
-        return mat;
+    /**
+     * @brief Convert to dense matrix (Vector of Vectors).
+     */
+    std::vector<std::vector<double>> to_dense() const {
+        std::vector<std::vector<double>> dense(rows, std::vector<double>(cols, 0.0));
+        for (int i = 0; i < rows; ++i) {
+            for (int k = row_ptr[i]; k < row_ptr[i + 1]; ++k) {
+                dense[i][col_indices[k]] = values[k];
+            }
+        }
+        return dense;
     }
 
     /**
