@@ -53,7 +53,7 @@ public:
 
         // 3. Engine Components
         auto timer = std::make_shared<num::ImplicitEulerIntegrator>();
-        auto linearizer = std::make_shared<top::NewtonRaphson>(1e-4, 10, true);
+        auto linearizer = std::make_shared<num::NewtonRaphson>(1e-4, 10, true);
         
         // FEM systems are usually non-symmetric and larger, BiCGSTAB is standard
         auto solver = std::make_shared<num::BiCGSTABSolver>();

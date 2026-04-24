@@ -7,7 +7,8 @@
 #include <iostream>
 #include <cmath>
 
-namespace top {
+namespace num {
+using namespace top;
 
 /**
  * @brief Standard Newton-Raphson non-linear solver.
@@ -127,4 +128,4 @@ public:
     }
 };
 
-} // namespace top
+} // namespace num

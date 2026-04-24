@@ -34,7 +34,7 @@ public:
         
         // 3. Engine Components
         auto timer = std::make_shared<num::ImplicitEulerIntegrator>();
-        auto linearizer = std::make_shared<top::NewtonRaphson>(1e-4, 5, true);
+        auto linearizer = std::make_shared<num::NewtonRaphson>(1e-4, 5, true);
         auto solver = std::make_shared<num::LinearTridiagonalSolver>(); // 1x1 is trivial
         auto pm = std::make_shared<top::SerialParallelManager>();
 

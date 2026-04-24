@@ -7,6 +7,7 @@
 #include "lib/utils/logger.hpp"
 #include "state.hpp"
 #include "model.hpp"
+#include "discretizer.hpp"
 #include "lib/solvers.hpp"
 #include "lib/integrators.hpp"
 
@@ -44,7 +45,7 @@ public:
         
         // 3. Engine Components
         auto timer = std::make_shared<num::ImplicitEulerIntegrator>();
-        auto linearizer = std::make_shared<top::NewtonRaphson>(1e-6, 12, true);
+        auto linearizer = std::make_shared<num::NewtonRaphson>(1e-6, 12, true);
         auto solver = std::make_shared<num::LinearTridiagonalSolver>();
         auto pm = std::make_shared<top::SerialParallelManager>();
 

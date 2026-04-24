@@ -65,7 +65,7 @@ public:
         
         // 3. Engine Components
         auto timer = std::make_shared<num::ImplicitEulerIntegrator>();
-        auto linearizer = std::make_shared<top::NewtonRaphson>(1e-4, 15, true);
+        auto linearizer = std::make_shared<num::NewtonRaphson>(1e-4, 15, true);
         
         // Large 3D Block System, BiCGSTAB is required
         auto solver = std::make_shared<num::BiCGSTABSolver>();

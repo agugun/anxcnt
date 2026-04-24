@@ -42,7 +42,7 @@ public:
         
         // 3. Engine Components (Explicit)
         auto timer = std::make_shared<num::ForwardEulerIntegrator>();
-        auto linearizer = std::make_shared<top::ExplicitLinearizer>(); 
+        auto linearizer = std::make_shared<num::ExplicitLinearizer>(); 
         auto solver = std::make_shared<num::LinearTridiagonalSolver>(); // Not strictly needed for FE but fulfills interface
         auto pm = std::make_shared<top::SerialParallelManager>();
 

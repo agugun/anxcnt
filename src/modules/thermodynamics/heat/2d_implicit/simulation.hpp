@@ -57,7 +57,7 @@ public:
         
         // 3. Engine Components
         auto timer = std::make_shared<num::ImplicitEulerIntegrator>();
-        auto linearizer = std::make_shared<top::NewtonRaphson>(1e-6, 12, true);
+        auto linearizer = std::make_shared<num::NewtonRaphson>(1e-6, 12, true);
         
         // For 2D, we use BiCGSTAB as LU is too slow
         auto solver = std::make_shared<num::BiCGSTABSolver>();

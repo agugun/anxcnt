@@ -36,24 +36,76 @@ axscnt/
 ---
 
 ### Internal Architecture
+#### The Numerical Engine
+- **Architectural Contracts (namespaces `top`)**: Defines the abstract interfaces (`IState`, `IModel`, `ISolver`) that enforce the AXSCNT "Simulation Contract".
+- **Numerical Core (namespaces `num`)**: Contains vectorized linear solvers (BiCGSTAB, Tridiagonal), non-linear Newton-Raphson schemes, and sparse matrix implementations.
+- **Infrastructure (namespaces `utl`)**: Handles cross-cutting concerns like hierarchical configuration, standardized logging, and filesystem orchestration.
 
-The C++ core is strictly segregated by namespaces to ensure mathematical consistency and infinite modularity.
-
-#### The Numerical Engine (`top` & `num`)
-- **Architectural Contracts (`top`)**: Defines the abstract interfaces (`IState`, `IModel`, `ISolver`) that enforce the AXSCNT "Simulation Contract".
-- **Numerical Core (`num`)**: Contains vectorized linear solvers (BiCGSTAB, Tridiagonal), non-linear Newton-Raphson schemes, and sparse matrix implementations.
-- **Infrastructure (`utl`)**: Handles cross-cutting concerns like hierarchical configuration, standardized logging, and filesystem orchestration.
-
-#### Physics Module Anatomy (`mod`)
-Every physical module implements the framework contract through four key components:
-
+#### Physics Module Anatomy (namespaces `mod`)
 1.  **`model.hpp`**: Defines the physical constants and the **Governing Equation** discretization.
 2.  **`state.hpp`**: A structured snapshot of the field data at any point in time.
 3.  **`simulation.hpp`**: A factory/builder that assembles the complex object graph (Grid ➔ Discretizer ➔ Linearizer ➔ Solver).
 4.  **`main.cpp`**: The execution orchestrator for standalone deployment.
 
+```mermaid
+classDiagram
+    namespace top {
+        class IGrid { +get_total_cells() }
+        class IState { +apply_update() }
+        class IModel { +get_accumulation_weights() }
+        class IDiscretizer { +assemble_jacobian() }
+        class ILinearizer { +solve_timestep() }
+        class ISolver { +solve() }
+        class ITimeIntegrator { +add_accumulation() }
+        class SimulationEngine { +simulate() }
+    }
+    
+    namespace num {
+        class Spatial1D
+        class ImplicitEulerIntegrator
+        class LinearTridiagonalSolver
+        class NewtonRaphson
+    }
+
+    namespace mod_pressure {
+        class Pressure1DState
+        class Pressure1DModel
+        class Pressure1DDiscretizer
+    }
+
+    <<Linearizer>> NewtonRaphson
+    <<Grid>> Spatial1D
+    <<Integrator>> ImplicitEulerIntegrator
+    <<Solver>> LinearTridiagonalSolver
+    <<state_hpp>> Pressure1DState
+    <<model_hpp>> Pressure1DModel
+    <<discretizer_hpp>> Pressure1DDiscretizer
+
+    %% Framework Implementations
+    IGrid <|.. Spatial1D : implements
+    ILinearizer <|.. NewtonRaphson : implements
+    ITimeIntegrator <|.. ImplicitEulerIntegrator : implements
+    ISolver <|.. LinearTridiagonalSolver : implements
+
+    %% Domain Implementations
+    IState <|.. Pressure1DState : implements
+    IModel <|.. Pressure1DModel : implements
+    IDiscretizer <|.. Pressure1DDiscretizer : implements
+
+    %% Internal Dependencies
+    Pressure1DState --> Spatial1D : sizes arrays from
+
+    %% The Engine dependencies
+    SimulationEngine o-- IGrid : manages
+    SimulationEngine o-- IState : evolves
+    SimulationEngine o-- IModel : queries
+    SimulationEngine o-- IDiscretizer : invokes
+    SimulationEngine o-- ILinearizer : utilizes
+    SimulationEngine o-- ITimeIntegrator : steps
+    SimulationEngine o-- ISolver : resolves
+```
+
 #### Software Engineering Design Patterns
-To ensure an enterprise-grade, maintainable codebase, AXSCNT utilizes several core design patterns:
 *   **Strategy Pattern (`ITimeIntegrator`, `ISolver`)**: Enables dynamic swapping of numerical methods (e.g., changing from `ImplicitEuler` to `RungeKutta4` or swapping linear solvers) without altering the governing physical models.
 *   **Builder / Factory Pattern (`simulation.hpp`)**: Encapsulates the complex instantiation and wiring of the numerical object graph (Grid ➔ Discretizer ➔ Linearizer ➔ Solver) to ensure a clean, reproducible setup phase for any physics module.
 *   **Facade Pattern (`axcnt_cpp` bindings)**: Provides a streamlined, high-level Python interface that masks the complexity of the underlying C++ simulation engine, effectively forming the "Analytical Bridge" for researchers.
@@ -133,10 +185,3 @@ New modules must adhere to the **Simulation Contract** defined in the `top` name
 3.  Ensure your code is documented with Doxygen-style comments.
 4.  Open a PR targeting the `main` branch.
 
----
-
-### License
-AXSCNT is released under the MIT License. **Copy-paste is encouraged**: feel free to take any kernel, discretization strategy, or utility for your own research or production projects.
-
-
----
