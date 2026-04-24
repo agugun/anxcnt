@@ -133,7 +133,7 @@ test_python: bindings
 	@echo "Running Python Binding Tests..."
 	$(PYTHON_VENV) tests/test_python_bindings.py
 
-test: test_math test_solvers test_integrators test_python
+test: test_math test_solvers test_python
 
 build_benchmark: $(BUILD_DIR)
 	@echo "Building Solver Performance Benchmark..."

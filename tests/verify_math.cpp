@@ -4,7 +4,6 @@
 #include <cmath>
 #include <iomanip>
 #include "lib/math_utils.hpp"
-#include "lib/operators.hpp"
 
 using namespace num;
 using namespace std;

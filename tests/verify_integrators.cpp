@@ -82,21 +82,24 @@ void test_reservoir_impes() {
 
     int nx = 5, ny = 5;
     double dx = 100.0, dy = 100.0;
-    Spatial2D spatial(nx, ny, dx, dy);
+    auto spatial = make_shared<Spatial2D>(nx, ny, dx, dy);
     double init_p = 3000.0;
     double init_sw = 0.2;
 
     auto state = make_unique<ReservoirDualPhase2DState>(spatial, init_p, init_sw);
     
     // Lambdas for Well interface
-    auto rp_func = [](double sw, double& krw, double& kro) {
+    auto rp_func = [](double sw, double& krw, double& kro) -> void {
         double swe = (sw - 0.2) / (1.0 - 0.2 - 0.2);
         swe = std::max(0.0, std::min(1.0, swe));
         krw = swe * swe;
         kro = (1.0 - swe) * (1.0 - swe);
     };
-    auto idx_func = [nx](int i, int j) { return j * nx + i; };
-    auto sw_func = [&](int i, int j) { return state->water_saturations[spatial.idx(i, j)]; };
+    auto idx_func = [nx](int i, int j) -> int { return j * nx + i; };
+    auto sw_func = [spatial](const top::IState& base_state, int i, int j) -> double { 
+        const auto& s = dynamic_cast<const ReservoirDualPhase2DState&>(base_state);
+        return s.water_saturations[spatial->idx(i, j)]; 
+    };
 
     // Setup Wells (Injector at 0,0 and Producer at 4,4)
     auto inj = make_shared<mod::ReservoirWellDual2D>(0, 0, 500.0, true, rp_func, idx_func, sw_func, 1.0, 2.0);
