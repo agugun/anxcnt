@@ -20,7 +20,7 @@ all: mod bindings
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
-mod: heat_1d_implicit heat_1d_explicit pressure_sim wave_1d heat_2d_implicit heat_3d_implicit mba reservoir_1d reservoir_2d reservoir_3d reservoir_dual_2d reservoir_oil_gas_2d reservoir_black_oil_2d reservoir_black_oil_3d burgers_fdm fluid_fem wave_2d
+mod: heat_1d_implicit heat_1d_explicit pressure_sim wave_1d heat_2d_implicit heat_3d_implicit mba reservoir_1d reservoir_2d reservoir_3d reservoir_dual_2d reservoir_oil_gas_2d reservoir_black_oil_2d reservoir_black_oil_3d burgers_fdm fluid_fem wave_2d oscillator
 
 heat_1d_implicit: $(BUILD_DIR)
 	@echo "Building Heat Simulation (Implicit) C++ Executable..."
@@ -89,6 +89,10 @@ burgers_fdm: $(BUILD_DIR)
 fluid_fem: $(BUILD_DIR)
 	@echo "Building 2D Fluid Dynamics Simulation (FEM) C++ Executable..."
 	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/fluids/fluid_dynamics/main.cpp -o $(BUILD_DIR)/fluid_fem
+
+oscillator: $(BUILD_DIR)
+	@echo "Building Harmonic Oscillator Pilot Case C++ Executable..."
+	$(CXX) $(CXX_FLAGS) $(SRC_DIR)/modules/oscillator/main.cpp -o $(BUILD_DIR)/oscillator
 
 
 build_physics: $(BUILD_DIR)

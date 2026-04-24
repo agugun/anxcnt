@@ -4,17 +4,12 @@ numpy==2.2.0
 pandas==2.2.3
 scipy==1.15.0
 matplotlib==3.10.0
+sympy>=1.12
+jax[cpu]>=0.4.0
 
 # Simulation & Binding
 pybind11==3.0.3
 
-# Visualization & Dashboard (Streamlit)
-streamlit==1.41.0
-plotly==5.24.1
-
-# Visualization & Dashboard (Dash)
-dash>=2.9.0
-dash-bootstrap-components>=1.4.0
-dash-vtk>=0.0.9
+# Visualization & Notebook (PyVista)
 pyvista>=0.38.0
 ipyvtklink>=0.2.2
