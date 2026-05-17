@@ -3,8 +3,15 @@
 #include "simulation.hpp"
 #include "lib/utils/config_reader.hpp"
 
-using namespace mod::reservoir;
+using namespace mod;
+using namespace sim;
 using namespace utl;
+using namespace num;
+using namespace mod::reservoir;
+
+
+
+
 
 int main(int argc, char** argv) {
     std::string config_file = "input/reservoir_black_oil_2d.txt";
@@ -20,7 +27,7 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to load config: " << config_file << "\n";
         return 1;
     }
-    
+
     int num_threads = config.get("num_threads", 4);
     omp_set_num_threads(num_threads);
 

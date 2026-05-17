@@ -4,12 +4,12 @@
 
 namespace mod {
 
-class Heat1DExplicitState : public top::IState {
+class Heat1DExplicitState : public IState {
 public:
-    top::Spatial1D spatial;
+    Spatial1D spatial;
     std::vector<double> temperatures;
 
-    Heat1DExplicitState(top::Spatial1D s, double initial_temp) 
+    Heat1DExplicitState(Spatial1D s, double initial_temp)
         : spatial(s), temperatures(s.nx, initial_temp) {}
 
     void update(const std::vector<double>& delta) override {

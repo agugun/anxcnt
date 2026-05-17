@@ -2,9 +2,8 @@
 #include "lib/interfaces.hpp"
 #include "state.hpp"
 #include "lib/discretization.hpp"
- 
+
 namespace mod {
-using namespace top;
 
 /**
  * @brief 1D Wave Physical Model (Properties).
@@ -14,12 +13,12 @@ public:
     std::shared_ptr<num::discretization::Conductance1D> cond;
     Vector storage_coeff;
 
-    Wave1DModel(std::shared_ptr<num::discretization::Conductance1D> c, const Vector& storage) 
+    Wave1DModel(std::shared_ptr<num::discretization::Conductance1D> c, const Vector& storage)
         : cond(c), storage_coeff(storage) {}
 
     double get_tolerance() const override { return 1e-4; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         size_t n = storage_coeff.size();
         Vector weights(2 * n);
         for (size_t i = 0; i < n; ++i) {
@@ -57,7 +56,7 @@ public:
         for (int i = 1; i < (int)n - 1; ++i) {
             double t_prev = w_model.cond->T[i-1];
             double t_next = w_model.cond->T[i];
-            
+
             int cur_v = i + (int)n;
             J.triplets.push_back({cur_v, i - 1, -t_prev});
             J.triplets.push_back({cur_v, i, t_prev + t_next});
@@ -96,10 +95,12 @@ public:
         J.triplets.push_back({(int)n-1, (int)n-1, 1.0});
 
         // Fixed velocity at boundaries
-        R[n] = w_state.v[0];
-        R[2*n-1] = w_state.v[n-1];
-        J.triplets.push_back({(int)n, (int)n, 1.0});
-        J.triplets.push_back({(int)2*n-1, (int)2*n-1, 1.0});
+        const int first_v = static_cast<int>(n);
+        const int last_v = static_cast<int>(2 * n - 1);
+        R[first_v] = w_state.v[0];
+        R[last_v] = w_state.v[n-1];
+        J.triplets.push_back({first_v, first_v, 1.0});
+        J.triplets.push_back({last_v, last_v, 1.0});
     }
 };
 

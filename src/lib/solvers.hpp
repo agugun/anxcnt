@@ -31,7 +31,7 @@
 #include "interfaces.hpp"
 
 namespace num {
-using namespace top;
+using namespace mod;
 
 /**
  * @brief Dense LU Linear Solver with Partial Pivoting.

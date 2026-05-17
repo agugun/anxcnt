@@ -4,7 +4,6 @@
 #include <vector>
 
 namespace mod {
-using namespace top;
 
 /**
  * @brief 1D Burgers' Equation Model (Physical Properties).
@@ -18,7 +17,7 @@ public:
 
     double get_tolerance() const override { return 1e-6; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         size_t n = st.to_vector().size();
         return Vector(n, 1.0); // u's mass matrix is identity in FDM
     }
@@ -43,7 +42,7 @@ public:
         // 1. Internal Nodes (FDM Central/Upwind)
         for (int i = 1; i < n - 1; ++i) {
             double u_i = s.u[i];
-            
+
             // Convection: u * du/dx (Upwind based on sign of u)
             if (u_i >= 0.0) {
                 // u_i * (u_i - u_{i-1}) / dx
@@ -79,7 +78,7 @@ public:
             double u_i = s.u[i];
             double c_flux = (u_i >= 0.0) ? u_i * (u_i - s.u[i-1]) / dx : u_i * (s.u[i+1] - u_i) / dx;
             double d_flux = nu * (s.u[i+1] - 2.0 * u_i + s.u[i-1]) / (dx * dx);
-            
+
             R[i] = c_flux - d_flux;
         }
     }

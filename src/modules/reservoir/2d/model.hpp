@@ -5,7 +5,6 @@
 #include "modules/reservoir/well.hpp"
 
 namespace mod {
-using namespace top;
 
 /**
  * @brief 2D Reservoir Physical Model (Properties).
@@ -16,13 +15,13 @@ public:
     Vector storage_coeff;
     std::vector<std::shared_ptr<ISourceSink>> wells;
 
-    Reservoir2DModel(std::shared_ptr<num::discretization::Conductance2D> c, const Vector& storage, 
+    Reservoir2DModel(std::shared_ptr<num::discretization::Conductance2D> c, const Vector& storage,
                      const std::vector<std::shared_ptr<ISourceSink>>& wells_val)
         : cond(c), storage_coeff(storage), wells(wells_val) {}
 
     double get_tolerance() const override { return 1e-4; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         return storage_coeff;
     }
 
@@ -49,7 +48,7 @@ public:
             for (int i = 0; i < nx; ++i) {
                 int cur = r_state.spatial->idx(i, j);
                 double diag = 0.0;
-                
+
                 if (i > 0) {
                     double t = r_model.cond->Tx[j*(nx-1) + i-1];
                     diag += t;
@@ -70,7 +69,7 @@ public:
                     diag += t;
                     J.triplets.push_back({cur, (int)r_state.spatial->idx(i, j+1), -t});
                 }
-                
+
                 J.triplets.push_back({cur, cur, diag});
             }
         }
@@ -87,12 +86,12 @@ public:
             for (int i = 0; i < nx; ++i) {
                 int cur = r_state.spatial->idx(i, j);
                 double net_flux = 0.0;
-                
+
                 if (i > 0)          net_flux += r_model.cond->Tx[j*(nx-1) + i-1] * (r_state.pressures[r_state.spatial->idx(i-1,j)] - r_state.pressures[cur]);
                 if (i < nx - 1)     net_flux += r_model.cond->Tx[j*(nx-1) + i]   * (r_state.pressures[r_state.spatial->idx(i+1,j)] - r_state.pressures[cur]);
                 if (j > 0)          net_flux += r_model.cond->Ty[(j-1)*nx + i]   * (r_state.pressures[r_state.spatial->idx(i,j-1)] - r_state.pressures[cur]);
                 if (j < ny - 1)     net_flux += r_model.cond->Ty[j*nx + i]       * (r_state.pressures[r_state.spatial->idx(i,j+1)] - r_state.pressures[cur]);
-                
+
                 R[cur] = -net_flux;
             }
         }

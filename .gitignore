@@ -13,3 +13,5 @@ __pycache__/
 bindings/python/build/
 
 *.log
+.codex
+.codex-handoff.md

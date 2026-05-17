@@ -3,7 +3,6 @@
 #include "lib/interfaces.hpp"
 
 namespace mod {
-using namespace top;
 
 /**
  * @brief State representing the scalar velocity field for Burgers' Equation.
@@ -13,7 +12,7 @@ public:
     Vector u; // Velocity scalar field
     std::shared_ptr<Spatial1D> spatial;
 
-    BurgersState(std::shared_ptr<Spatial1D> s, double initial_val = 0.0) 
+    BurgersState(std::shared_ptr<Spatial1D> s, double initial_val = 0.0)
         : u(s->nx, initial_val), spatial(s) {}
 
     void update(const std::vector<double>& delta) override {

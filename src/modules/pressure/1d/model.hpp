@@ -2,9 +2,8 @@
 #include "lib/interfaces.hpp"
 #include "state.hpp"
 #include "lib/discretization.hpp"
- 
+
 namespace mod {
-using namespace top;
 
 /**
  * @brief 1D Pressure Physical Model (Properties).
@@ -12,15 +11,15 @@ using namespace top;
 class Pressure1DModel : public IModel {
 public:
     double p_left, p_right;
-    std::shared_ptr<num::discretization::Conductance1D> cond;
+    std::shared_ptr<disc::Conductance1D> cond;
     Vector storage_coeff;
 
-    Pressure1DModel(std::shared_ptr<num::discretization::Conductance1D> c, const Vector& storage, double pl, double pr)
+    Pressure1DModel(std::shared_ptr<disc::Conductance1D> c, const Vector& storage, double pl, double pr)
         : p_left(pl), p_right(pr), cond(c), storage_coeff(storage) {}
 
     double get_tolerance() const override { return 1e-6; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const geo::IGrid& grd, const IState& st) const override {
         return storage_coeff;
     }
 };
@@ -30,7 +29,7 @@ public:
  */
 class Pressure1DDiscretizer : public IDiscretizer {
 public:
-    void build_jacobian(const IGrid& grd, const IModel& mdl, const IState& st, SparseMatrix& J) const override {
+    void build_jacobian(const geo::IGrid& grd, const IModel& mdl, const IState& st, SparseMatrix& J) const override {
         const auto& p_model = static_cast<const Pressure1DModel&>(mdl);
         const auto& p_state = static_cast<const Pressure1DState&>(st);
         size_t n = p_state.pressures.size();
@@ -41,14 +40,14 @@ public:
         for (int i = 1; i < (int)n - 1; ++i) {
             double t_prev = p_model.cond->T[i-1];
             double t_next = p_model.cond->T[i];
-            
+
             J.triplets.push_back({i, i-1, -t_prev});
             J.triplets.push_back({i, i, t_prev + t_next});
             J.triplets.push_back({i, i+1, -t_next});
         }
     }
 
-    void build_residual(const IGrid& grd, const IModel& mdl, const IState& st, Vector& R) const override {
+    void build_residual(const geo::IGrid& grd, const IModel& mdl, const IState& st, Vector& R) const override {
         const auto& p_model = static_cast<const Pressure1DModel&>(mdl);
         const auto& p_state = static_cast<const Pressure1DState&>(st);
         size_t n = p_state.pressures.size();
@@ -61,7 +60,7 @@ public:
         }
     }
 
-    void apply_bc(const IGrid& grd, const IModel& mdl, const IState& st, SparseMatrix& J, Vector& R) const override {
+    void apply_bc(const geo::IGrid& grd, const IModel& mdl, const IState& st, SparseMatrix& J, Vector& R) const override {
         const auto& p_model = static_cast<const Pressure1DModel&>(mdl);
         const auto& p_state = static_cast<const Pressure1DState&>(st);
         size_t n = R.size();

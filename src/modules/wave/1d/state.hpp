@@ -3,7 +3,6 @@
 #include "lib/interfaces.hpp"
 
 namespace mod {
-using namespace top;
 
 class Wave1DState : public IState {
 public:
@@ -11,7 +10,7 @@ public:
     Vector v; // Velocity
     std::shared_ptr<Spatial1D> spatial;
 
-    Wave1DState(std::shared_ptr<Spatial1D> s, double initial_displacement = 0.0) 
+    Wave1DState(std::shared_ptr<Spatial1D> s, double initial_displacement = 0.0)
         : u(s->nx, initial_displacement), v(s->nx, 0.0), spatial(s) {}
 
     void update(const std::vector<double>& delta) override {

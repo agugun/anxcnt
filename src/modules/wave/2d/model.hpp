@@ -2,9 +2,8 @@
 #include "lib/interfaces.hpp"
 #include "state.hpp"
 #include "lib/discretization.hpp"
- 
+
 namespace mod::wave {
-using namespace top;
 
 /**
  * @brief 2D Wave Physical Model (Properties).
@@ -14,12 +13,12 @@ public:
     std::shared_ptr<num::discretization::Conductance2D> cond;
     Vector storage_coeff;
 
-    Wave2DModel(std::shared_ptr<num::discretization::Conductance2D> c, const Vector& storage) 
+    Wave2DModel(std::shared_ptr<num::discretization::Conductance2D> c, const Vector& storage)
         : cond(c), storage_coeff(storage) {}
 
     double get_tolerance() const override { return 1e-4; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         size_t n = storage_coeff.size();
         Vector weights(2 * n);
         for (size_t i = 0; i < n; ++i) {
@@ -58,7 +57,7 @@ public:
             for (int i = 1; i < nx - 1; ++i) {
                 int cur = w_state.spatial->idx(i, j);
                 int cur_v = cur + n;
-                
+
                 double tx_prev = w_model.cond->Tx[j*(nx-1) + i-1];
                 double tx_next = w_model.cond->Tx[j*(nx-1) + i];
                 double ty_prev = w_model.cond->Ty[(j-1)*nx + i];
@@ -91,12 +90,12 @@ public:
         for (int j = 1; j < ny - 1; ++j) {
             for (int i = 1; i < nx - 1; ++i) {
                 int cur = w_state.spatial->idx(i, j);
-                double net_flux = 
+                double net_flux =
                     w_model.cond->Tx[j*(nx-1) + i-1] * (w_state.u[w_state.spatial->idx(i-1,j)] - w_state.u[cur]) +
                     w_model.cond->Tx[j*(nx-1) + i]   * (w_state.u[w_state.spatial->idx(i+1,j)] - w_state.u[cur]) +
                     w_model.cond->Ty[(j-1)*nx + i]   * (w_state.u[w_state.spatial->idx(i,j-1)] - w_state.u[cur]) +
                     w_model.cond->Ty[j*nx + i]       * (w_state.u[w_state.spatial->idx(i,j+1)] - w_state.u[cur]);
-                
+
                 R[cur + n] = -net_flux;
             }
         }
@@ -112,7 +111,7 @@ public:
         for (int i = 0; i < nx; ++i) {
             int b_idx = w_state.spatial->idx(i, 0);
             int t_idx = w_state.spatial->idx(i, ny - 1);
-            
+
             R[b_idx] = w_state.u[b_idx]; J.triplets.push_back({b_idx, b_idx, 1.0});
             R[t_idx] = w_state.u[t_idx]; J.triplets.push_back({t_idx, t_idx, 1.0});
             R[b_idx+n] = w_state.v[b_idx]; J.triplets.push_back({b_idx+n, b_idx+n, 1.0});

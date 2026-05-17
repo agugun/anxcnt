@@ -2,7 +2,6 @@
 #include "lib/interfaces.hpp"
 
 namespace mod {
-using namespace top;
 
 /**
  * @brief Base class for all Heat Simulation states.
@@ -12,13 +11,13 @@ public:
     Vector temperatures;
 
     HeatState(size_t size, double initial_temp) : temperatures(size, initial_temp) {}
-    
+
     virtual ~HeatState() = default;
 
     /**
      * @brief Update temperature values using a delta vector.
      */
-    void apply_update(const std::vector<double>& delta) override {
+    void update(const std::vector<double>& delta) override {
         for (size_t i = 0; i < temperatures.size(); ++i) {
             temperatures[i] += delta[i];
         }

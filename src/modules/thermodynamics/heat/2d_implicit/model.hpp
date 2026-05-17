@@ -2,9 +2,8 @@
 #include "lib/interfaces.hpp"
 #include "state.hpp"
 #include "lib/discretization.hpp"
- 
+
 namespace mod {
-using namespace top;
 
 /**
  * @brief 2D Heat Physical Model (Properties).
@@ -21,7 +20,7 @@ public:
 
     double get_tolerance() const override { return 1e-6; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         return storage_coeff;
     }
 };
@@ -69,12 +68,12 @@ public:
         for (int j = 1; j < ny - 1; ++j) {
             for (int i = 1; i < nx - 1; ++i) {
                 int cur = h_state.spatial->idx(i, j);
-                double net_flux = 
+                double net_flux =
                     h_model.cond->Tx[j*(nx-1) + i-1] * (h_state.temperatures[h_state.spatial->idx(i-1,j)] - h_state.temperatures[cur]) +
                     h_model.cond->Tx[j*(nx-1) + i]   * (h_state.temperatures[h_state.spatial->idx(i+1,j)] - h_state.temperatures[cur]) +
                     h_model.cond->Ty[(j-1)*nx + i]   * (h_state.temperatures[h_state.spatial->idx(i,j-1)] - h_state.temperatures[cur]) +
                     h_model.cond->Ty[j*nx + i]       * (h_state.temperatures[h_state.spatial->idx(i,j+1)] - h_state.temperatures[cur]);
-                
+
                 R[cur] = -net_flux;
             }
         }

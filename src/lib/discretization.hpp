@@ -4,13 +4,11 @@
 #include <algorithm>
 #include "interfaces.hpp"
 
-namespace num {
-
 /**
- * @namespace discretization
- * @brief Centralized Numerical Discretization Toolbox.
+ * @namespace disc
+ * @brief Shared discretization coefficients and coefficient builders.
  */
-namespace discretization {
+namespace disc {
 
 /**
  * @brief 1D Conductance and Geometric properties.
@@ -163,6 +161,35 @@ inline std::shared_ptr<Conductance3D> pressure_cond_3d(int nx, int ny, int nz, d
 inline std::vector<double> pressure_storage(int n, double vol, double phi, double ct) {
     return std::vector<double>(n, vol * phi * ct / 0.0002637);
 }
+
+} // namespace disc
+
+// Compatibility aliases for existing modules; new code should prefer disc::.
+namespace num {
+namespace discretization {
+
+using ::disc::Conductance1D;
+using ::disc::Conductance2D;
+using ::disc::Conductance3D;
+
+using ::disc::heat_cond_1d;
+using ::disc::heat_cond_2d;
+using ::disc::heat_cond_3d;
+using ::disc::heat_storage;
+
+using ::disc::reservoir_cond_1d;
+using ::disc::reservoir_cond_2d;
+using ::disc::reservoir_cond_3d;
+using ::disc::reservoir_storage;
+
+using ::disc::wave_cond_1d;
+using ::disc::wave_cond_2d;
+using ::disc::wave_storage;
+
+using ::disc::pressure_cond_1d;
+using ::disc::pressure_cond_2d;
+using ::disc::pressure_cond_3d;
+using ::disc::pressure_storage;
 
 } // namespace discretization
 } // namespace num

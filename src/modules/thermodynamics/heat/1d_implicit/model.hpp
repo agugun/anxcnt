@@ -3,9 +3,8 @@
 #include "state.hpp"
 #include "lib/discretization.hpp"
 #include "lib/spatial.hpp"
- 
+
 namespace mod {
-using namespace top;
 
 /**
  * @brief 1D Heat Physical Model (Properties).
@@ -16,12 +15,12 @@ public:
     std::shared_ptr<num::discretization::Conductance1D> cond;
     Vector storage_coeff;
 
-    Heat1DModel(std::shared_ptr<num::discretization::Conductance1D> c, const Vector& storage, double TL, double TR) 
+    Heat1DModel(std::shared_ptr<num::discretization::Conductance1D> c, const Vector& storage, double TL, double TR)
         : T_left(TL), T_right(TR), cond(c), storage_coeff(storage) {}
 
     double get_tolerance() const override { return 1e-6; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         return storage_coeff;
     }
 };
@@ -43,7 +42,7 @@ public:
         for (int i = 1; i < (int)n - 1; ++i) {
             double t_prev = h_model.cond->T[i-1];
             double t_next = h_model.cond->T[i];
-            
+
             // J = -dt * Grad(T) is handled by the TimeIntegrator and Discretizer collaboration.
             // Here we assemble ONLY the spatial part (Negative Laplacian).
             J.triplets.push_back({i, i-1, -t_prev});

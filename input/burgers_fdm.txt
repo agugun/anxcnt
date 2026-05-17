@@ -1,0 +1,16 @@
+# Export Configuration
+export_dir = exports
+project_name = burgers_fdm
+enable_vtk = 0
+enable_json = 0
+enable_csv = 0
+log_frequency = 10
+export_frequency = 50
+
+# Parameters
+nx = 100
+dx = 0.01
+dt = 0.01
+t_end = 0.1
+nu = 0.01
+num_threads = 4

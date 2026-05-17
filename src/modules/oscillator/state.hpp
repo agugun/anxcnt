@@ -13,7 +13,7 @@ using Velocity_ms = double;
  * @brief State object for the Harmonic Oscillator.
  * Adheres to the notebook structure: State -> Properties -> Discretization -> Assembly
  */
-class OscillatorState : public top::IState {
+class OscillatorState : public IState {
 public:
     Position_m x;
     Velocity_ms v;
@@ -30,7 +30,7 @@ public:
         return {x, v};
     }
 
-    std::unique_ptr<top::IState> clone() const override {
+    std::unique_ptr<IState> clone() const override {
         return std::make_unique<OscillatorState>(x, v);
     }
 };

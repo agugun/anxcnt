@@ -5,7 +5,6 @@
 #include <algorithm>
 
 namespace mod::reservoir {
-using namespace top;
 
 /**
  * @brief State representing the Oil-Gas multiphase system (Pressure and Gas Saturation).
@@ -14,7 +13,7 @@ class ReservoirOilGas2DState : public IState {
 public:
     std::shared_ptr<Spatial2D> spatial;
     Vector variables; // Interleaved [P, Sg, P, Sg, ...]
-    
+
     const double swc = 0.2; // Fixed Connate Water
 
     ReservoirOilGas2DState(std::shared_ptr<Spatial2D> s, double p_init, double s_init)
@@ -29,7 +28,7 @@ public:
         for (size_t i = 0; i < variables.size(); i += 2) {
             variables[i] += delta[i];
             variables[i + 1] += delta[i + 1];
-            
+
             // Physical boundaries
             variables[i] = std::max(14.7, variables[i]);
             variables[i + 1] = std::max(0.0, std::min(1.0 - swc, variables[i + 1]));

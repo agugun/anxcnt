@@ -4,8 +4,15 @@
 #include "simulation.hpp"
 #include "lib/utils/config_reader.hpp"
 
+using namespace mod;
+using namespace sim;
 using namespace utl;
+using namespace num;
 using namespace mod::heat;
+
+
+
+
 
 int main(int argc, char** argv) {
     // 1. Controller: Configuration & Environment
@@ -19,7 +26,7 @@ int main(int argc, char** argv) {
 
     ConfigReader config;
     config.load(config_file);
-    
+
     // Command line overrides
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];

@@ -2,9 +2,8 @@
 #include "lib/interfaces.hpp"
 #include "state.hpp"
 #include "lib/discretization.hpp"
- 
+
 namespace mod {
-using namespace top;
 namespace heat {
 
 /**
@@ -18,12 +17,12 @@ public:
 
     Heat3DModel(std::shared_ptr<num::discretization::Conductance3D> c, const Vector& storage,
                 double front, double back, double top, double bottom, double left, double right)
-        : T_front(front), T_back(back), T_top(top), T_bottom(bottom), T_left(left), T_right(right), 
+        : T_front(front), T_back(back), T_top(top), T_bottom(bottom), T_left(left), T_right(right),
           cond(c), storage_coeff(storage) {}
 
     double get_tolerance() const override { return 1e-6; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         return storage_coeff;
     }
 };
@@ -50,7 +49,7 @@ public:
             for (int j = 1; j < ny - 1; ++j) {
                 for (int i = 1; i < nx - 1; ++i) {
                     int cur = h_state.spatial->idx(i, j, k);
-                    
+
                     double tx_prev = h_model.cond->Tx[(k * ny + j) * (nx - 1) + i - 1];
                     double tx_next = h_model.cond->Tx[(k * ny + j) * (nx - 1) + i];
                     double ty_prev = h_model.cond->Ty[(k * (ny - 1) + j - 1) * nx + i];
@@ -82,14 +81,14 @@ public:
             for (int j = 1; j < ny - 1; ++j) {
                 for (int i = 1; i < nx - 1; ++i) {
                     int cur = h_state.spatial->idx(i, j, k);
-                    double net_flux = 
+                    double net_flux =
                         h_model.cond->Tx[(k * ny + j) * (nx - 1) + i - 1] * (h_state.temperatures[h_state.spatial->idx(i - 1, j, k)] - h_state.temperatures[cur]) +
                         h_model.cond->Tx[(k * ny + j) * (nx - 1) + i]     * (h_state.temperatures[h_state.spatial->idx(i + 1, j, k)] - h_state.temperatures[cur]) +
                         h_model.cond->Ty[(k * (ny - 1) + j - 1) * nx + i] * (h_state.temperatures[h_state.spatial->idx(i, j - 1, k)] - h_state.temperatures[cur]) +
                         h_model.cond->Ty[(k * (ny - 1) + j) * nx + i]     * (h_state.temperatures[h_state.spatial->idx(i, j + 1, k)] - h_state.temperatures[cur]) +
                         h_model.cond->Tz[((k - 1) * ny + j) * nx + i]     * (h_state.temperatures[h_state.spatial->idx(i, j, k - 1)] - h_state.temperatures[cur]) +
                         h_model.cond->Tz[(k * ny + j) * nx + i]           * (h_state.temperatures[h_state.spatial->idx(i, j, k + 1)] - h_state.temperatures[cur]);
-                    
+
                     R[cur] = -net_flux;
                 }
             }

@@ -6,12 +6,12 @@
 #include <vector>
 #include <chrono>
 #include <iomanip>
+#include <utility>
 #include <omp.h>
-#include "lib/modules.hpp"
 #include "lib/sparse.hpp"
 #include "lib/solvers.hpp"
 
-using namespace top;
+using namespace mod;
 using namespace num;
 using namespace std;
 
@@ -76,7 +76,10 @@ public:
                 }
             }
         }
-        return SparseMatrix::from_triplets(n_total, n_total, entries);
+        SparseMatrix matrix(n_total, n_total);
+        matrix.triplets = std::move(entries);
+        matrix.compress();
+        return matrix;
     }
 
     /**
@@ -87,7 +90,7 @@ public:
         
         auto start = chrono::high_resolution_clock::now();
         // Use BiCGSTAB as it's the target for multithreading
-        BiCGSTABSolver::solve(A, b, 1e-6, 500, false);
+        BiCGSTABSolver::solve_system(A, b, 1e-6, 500, false);
         auto end = chrono::high_resolution_clock::now();
         
         chrono::duration<double, milli> duration = end - start;

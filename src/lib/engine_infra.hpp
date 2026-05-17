@@ -7,7 +7,8 @@
 #include <cmath>
 #include <numeric>
 
-namespace top {
+namespace utl {
+using namespace mod;
 
 /**
  * @brief Default Serial Implementation of ParallelManager.
@@ -15,7 +16,7 @@ namespace top {
  */
 class SerialParallelManager : public IParallelManager {
 public:
-    void sync_ghost_cells(IState& state) const override {
+    void sync_ghost_cells(IState& st) const override {
         // No-op in serial
     }
 
@@ -25,6 +26,11 @@ public:
         return std::sqrt(local_norm);
     }
 };
+
+} // namespace utl
+
+namespace num {
+using namespace mod;
 
 /**
  * @brief Minimal Serial Solver Wrapper (Stub).
@@ -38,4 +44,4 @@ public:
     }
 };
 
-} // namespace top
+} // namespace num

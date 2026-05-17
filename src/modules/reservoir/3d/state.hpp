@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace mod::reservoir {
-using namespace top;
 
 /**
  * @brief State representing a 3D Single-Phase Reservoir (Pressure).
@@ -18,13 +17,13 @@ public:
     Reservoir3DState(std::shared_ptr<Spatial3D> s, double initial_p)
         : spatial(s), pressures(s->nx * s->ny * s->nz, initial_p) {}
 
-    void update(const top::Vector& delta) override {
+    void update(const Vector& delta) override {
         for (size_t i = 0; i < pressures.size(); ++i) {
             pressures[i] += delta[i];
         }
     }
 
-    top::Vector to_vector() const override {
+    Vector to_vector() const override {
         return pressures;
     }
 

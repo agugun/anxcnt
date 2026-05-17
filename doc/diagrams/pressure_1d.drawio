@@ -1,0 +1,126 @@
+<mxfile host="65bd71144e" version="21.6.6">
+    <diagram id="pressure_1d_hifi_final" name="High-Fidelity UML Pressure 1D">
+        <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                
+                <!-- NAMESPACE mod -->
+                <mxCell id="bound_mod" value="Namespace: mod" style="swimlane;whiteSpace=wrap;html=1;dashed=1;dashPattern=1 4;strokeColor=#666666;fillColor=none;fontStyle=1;startSize=30;verticalAlign=top;align=left;spacingLeft=10;" vertex="1" parent="1">
+                    <mxGeometry x="20" y="20" width="600" height="600" as="geometry"/>
+                </mxCell>
+
+                <!-- IState -->
+                <mxCell id="IState" value="«interface»&lt;br&gt;&lt;b&gt;IState&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="bound_mod">
+                    <mxGeometry x="20" y="40" width="220" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="IState_methods" value="+update(delta : Vector)&lt;br&gt;+to_vector() : Vector&lt;br&gt;+clone() : unique_ptr&lt;IState&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;borderTop=1;" vertex="1" parent="IState">
+                    <mxGeometry y="40" width="220" height="80" as="geometry"/>
+                </mxCell>
+
+                <!-- IModel -->
+                <mxCell id="IModel" value="«interface»&lt;br&gt;&lt;b&gt;IModel&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="bound_mod">
+                    <mxGeometry x="260" y="40" width="280" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="IModel_methods" value="+get_tolerance() : double&lt;br&gt;+build_capacity(grd:IGrid, st:IState) : Vector" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;borderTop=1;" vertex="1" parent="IModel">
+                    <mxGeometry y="40" width="280" height="80" as="geometry"/>
+                </mxCell>
+
+                <!-- Pressure1DState -->
+                <mxCell id="StateImpl" value="&lt;b&gt;Pressure1DState&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="bound_mod">
+                    <mxGeometry x="20" y="380" width="220" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="StateImpl_attr" value="+pressures : Vector&lt;br&gt;+spatial : shared_ptr&lt;Spatial1D&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="StateImpl">
+                    <mxGeometry y="30" width="220" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="StateImpl_methods" value="+update(delta : Vector)&lt;br&gt;+clone() : unique_ptr&lt;IState&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;borderTop=1;" vertex="1" parent="StateImpl">
+                    <mxGeometry y="80" width="220" height="60" as="geometry"/>
+                </mxCell>
+
+                <!-- Pressure1DModel -->
+                <mxCell id="ModelImpl" value="&lt;b&gt;Pressure1DModel&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="bound_mod">
+                    <mxGeometry x="260" y="380" width="280" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="ModelImpl_attr" value="+p_left : double&lt;br&gt;+p_right : double&lt;br&gt;+cond : shared_ptr&lt;Conductance1D&gt;&lt;br&gt;+storage_coeff : Vector" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="ModelImpl">
+                    <mxGeometry y="30" width="280" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="ModelImpl_methods" value="+build_capacity(grd:IGrid, st:IState)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;borderTop=1;" vertex="1" parent="ModelImpl">
+                    <mxGeometry y="110" width="280" height="70" as="geometry"/>
+                </mxCell>
+
+                <!-- NAMESPACE num -->
+                <mxCell id="bound_num" value="Namespace: num" style="swimlane;whiteSpace=wrap;html=1;dashed=1;dashPattern=1 4;strokeColor=#666666;fillColor=none;fontStyle=1;startSize=30;verticalAlign=top;align=left;spacingLeft=10;" vertex="1" parent="1">
+                    <mxGeometry x="640" y="20" width="600" height="600" as="geometry"/>
+                </mxCell>
+
+                <!-- ILinearizer -->
+                <mxCell id="ILinearizer" value="«interface»&lt;br&gt;&lt;b&gt;ILinearizer&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="bound_num">
+                    <mxGeometry x="20" y="40" width="300" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="ILinearizer_methods" value="+resolve(st_n:IState, dt:double, ...) : unique_ptr" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;borderTop=1;" vertex="1" parent="ILinearizer">
+                    <mxGeometry y="40" width="300" height="70" as="geometry"/>
+                </mxCell>
+
+                <!-- NewtonRaphson -->
+                <mxCell id="NewtonImpl" value="&lt;b&gt;NewtonRaphson&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" vertex="1" parent="bound_num">
+                    <mxGeometry x="20" y="380" width="300" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="NewtonImpl_attr" value="-max_iter : int&lt;br&gt;-tolerance : double&lt;br&gt;-verbose : bool" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="NewtonImpl">
+                    <mxGeometry y="30" width="300" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="NewtonImpl_methods" value="+resolve(st_n:IState, dt:double, ...)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;borderTop=1;" vertex="1" parent="NewtonImpl">
+                    <mxGeometry y="80" width="300" height="40" as="geometry"/>
+                </mxCell>
+
+                <!-- NAMESPACE sim -->
+                <mxCell id="bound_sim" value="Namespace: sim" style="swimlane;whiteSpace=wrap;html=1;dashed=1;dashPattern=1 4;strokeColor=#6c8ebf;fillColor=#f8cecc;fontStyle=1;startSize=30;verticalAlign=top;align=left;spacingLeft=10;opacity=30;" vertex="1" parent="1">
+                    <mxGeometry x="1260" y="20" width="400" height="600" as="geometry"/>
+                </mxCell>
+
+                <!-- Simulation Abstract -->
+                <mxCell id="Simulation" value="«abstract»&lt;br&gt;&lt;b&gt;Simulation&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="bound_sim">
+                    <mxGeometry x="20" y="40" width="360" height="260" as="geometry"/>
+                </mxCell>
+                <mxCell id="Simulation_attr" value="#grd : shared_ptr&lt;IGrid&gt;&lt;br&gt;#mdl : shared_ptr&lt;IModel&gt;&lt;br&gt;#timer : shared_ptr&lt;ITimeIntegrator&gt;&lt;br&gt;#linearizer : shared_ptr&lt;ILinearizer&gt;&lt;br&gt;#solver : shared_ptr&lt;ISolver&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" vertex="1" parent="Simulation">
+                    <mxGeometry y="40" width="360" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="Simulation_methods" value="+build(config : ConfigReader) = 0&lt;br&gt;+step(t:double, dt:double, st_curr:IState) : unique_ptr&lt;br&gt;+run(t_max:double, dt:double, st_init:unique_ptr) : unique_ptr" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;borderTop=1;" vertex="1" parent="Simulation">
+                    <mxGeometry y="140" width="360" height="120" as="geometry"/>
+                </mxCell>
+
+                <!-- PressureSimulation -->
+                <mxCell id="SimImpl" value="&lt;b&gt;PressureSimulation&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="bound_sim">
+                    <mxGeometry x="20" y="380" width="360" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="SimImpl_methods" value="+build(config : ConfigReader) override&lt;br&gt;+create_initial_state(config : ConfigReader) : unique_ptr" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;borderTop=1;" vertex="1" parent="SimImpl">
+                    <mxGeometry y="30" width="360" height="90" as="geometry"/>
+                </mxCell>
+
+                <!-- AGGREGATION -->
+                <mxCell id="agg1" value="" style="endArrow=diamondThin;endFill=0;endSize=24;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="Simulation" target="IModel">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="agg2" value="" style="endArrow=diamondThin;endFill=0;endSize=24;html=1;rounded=0;exitX=0;exitY=0.75;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="Simulation" target="ILinearizer">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- DEPENDENCY -->
+                <mxCell id="dep1" value="«uses»" style="endArrow=open;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;dashed=1;endFill=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="SimImpl" target="ModelImpl">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="dep2" value="«uses»" style="endArrow=open;html=1;rounded=0;exitX=0;exitY=0.25;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;dashed=1;endFill=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="SimImpl" target="NewtonImpl">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- INHERITANCE -->
+                <mxCell id="gen1" value="" style="endArrow=block;endFill=0;endSize=12;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="StateImpl" target="IState">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="gen2" value="" style="endArrow=block;endFill=0;endSize=12;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="SimImpl" target="Simulation">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry"/>
+                </mxCell>
+
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -3,14 +3,13 @@
 #include "../heat_state.hpp"
 
 namespace mod {
-using namespace top;
 namespace heat {
 
 class Heat3DImplicitState : public HeatState {
 public:
     std::shared_ptr<Spatial3D> spatial;
 
-    Heat3DImplicitState(std::shared_ptr<Spatial3D> s, double initial_temp = 0.0) 
+    Heat3DImplicitState(std::shared_ptr<Spatial3D> s, double initial_temp = 0.0)
         : HeatState(s->total_size(), initial_temp), spatial(s) {}
 
     std::unique_ptr<IState> clone() const override {

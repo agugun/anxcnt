@@ -5,7 +5,6 @@
 #include <algorithm>
 
 namespace mod::reservoir {
-using namespace top;
 
 /**
  * @brief ReservoirBlackOil3DState tracks 3 variables per cell in 3D.
@@ -18,7 +17,7 @@ public:
 
     ReservoirBlackOil3DState(std::shared_ptr<Spatial3D> s)
         : spatial(s), variables(3 * s->total_size(), 0.0) {
-        
+
         for (int i = 0; i < (int)s->total_size(); ++i) {
             variables[3 * i]     = 2000.0; // Initial Pressure
             variables[3 * i + 1] = 0.2;    // Initial Water (Connate)
@@ -31,7 +30,7 @@ public:
             variables[i]     += delta[i];
             variables[i + 1] += delta[i + 1];
             variables[i + 2] += delta[i + 2];
-            
+
             // Physical boundaries
             variables[i]     = std::max(14.7, variables[i]);
             variables[i + 1] = std::max(0.0, std::min(1.0, variables[i + 1]));
@@ -48,7 +47,7 @@ public:
         copy->variables = this->variables;
         return copy;
     }
-    
+
     // Helper accessors
     double p(int c) const { return variables[3 * c]; }
     double sw(int c) const { return variables[3 * c + 1]; }

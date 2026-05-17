@@ -3,14 +3,13 @@
 #include "lib/interfaces.hpp"
 
 namespace mod {
-using namespace top;
 
 class Pressure1DState : public IState {
 public:
     Vector pressures;
-    std::shared_ptr<Spatial1D> spatial;
+    std::shared_ptr<geo::Spatial1D> spatial;
 
-    Pressure1DState(std::shared_ptr<Spatial1D> s, double initial_press) 
+    Pressure1DState(std::shared_ptr<geo::Spatial1D> s, double initial_press)
         : pressures(s->nx, initial_press), spatial(s) {}
 
     void update(const std::vector<double>& delta) override {

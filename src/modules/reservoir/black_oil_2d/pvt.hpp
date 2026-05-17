@@ -15,9 +15,9 @@ public:
     double gamma_o; // Oil specific gravity (water=1.0)
     double temp_f;  // Reservoir Temperature [F]
     double pb;      // Bubble Point [psi]
-    
+
     double api;     // API Gravity
-    
+
     BlackOilPVT(double g_g = 0.7, double g_o = 0.8, double temp = 150.0, double p_b = 1500.0)
         : gamma_g(g_g), gamma_o(g_o), temp_f(temp), pb(p_b) {
         api = (141.5 / gamma_o) - 131.5;

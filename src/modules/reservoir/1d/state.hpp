@@ -3,7 +3,6 @@
 #include "lib/interfaces.hpp"
 
 namespace mod {
-using namespace top;
 
 class Reservoir1DState : public IState {
 public:

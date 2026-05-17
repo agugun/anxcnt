@@ -3,22 +3,21 @@
 #include "state.hpp"
 
 namespace mod::reservoir {
-using namespace top;
 
 /**
  * @brief Material Balance Model (Physical Properties).
  */
 class MBAModel : public IModel {
 public:
-    double volume; 
-    double ct;     
-    double q;      
+    double volume;
+    double ct;
+    double q;
 
     MBAModel(double V, double ct_val, double q_val) : volume(V), ct(ct_val), q(q_val) {}
 
     double get_tolerance() const override { return 1e-4; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         return { volume * ct }; // Accumulation is volume * ct * dP
     }
 };

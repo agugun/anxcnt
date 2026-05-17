@@ -1,32 +1,31 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include "modules/thermodynamics/heat/1d_implicit/mdl.hpp"
-#include "modules/thermodynamics/heat/1d_implicit/st.hpp"
-#include "modules/thermodynamics/heat/2d_implicit/mdl.hpp"
-#include "modules/thermodynamics/heat/2d_implicit/st.hpp"
-#include "modules/pressure/1d/mdl.hpp"
-#include "modules/pressure/1d/st.hpp"
-#include "modules/wave/1d/mdl.hpp"
-#include "modules/wave/1d/st.hpp"
-#include "modules/fluids/burgers/mdl.hpp"
-#include "modules/fluids/burgers/st.hpp"
-#include "modules/fluids/fluid_dynamics/mdl.hpp"
-#include "modules/fluids/fluid_dynamics/st.hpp"
-#include "modules/reservoir/1d/mdl.hpp"
-#include "modules/reservoir/1d/st.hpp"
-#include "modules/reservoir/2d/mdl.hpp"
-#include "modules/reservoir/2d/st.hpp"
 #include "lib/simulation.hpp"
 #include "lib/integrators.hpp"
 #include "lib/solvers.hpp"
 #include "lib/linearizers.hpp"
 #include "lib/engine_infra.hpp"
 #include "lib/fem.hpp"
+#include "modules/thermodynamics/heat/1d_implicit/model.hpp"
+#include "modules/thermodynamics/heat/1d_implicit/state.hpp"
+#include "modules/thermodynamics/heat/2d_implicit/model.hpp"
+#include "modules/thermodynamics/heat/2d_implicit/state.hpp"
+#include "modules/pressure/1d/model.hpp"
+#include "modules/pressure/1d/state.hpp"
+#include "modules/wave/1d/model.hpp"
+#include "modules/wave/1d/state.hpp"
+#include "modules/fluids/burgers/model.hpp"
+#include "modules/fluids/burgers/state.hpp"
+#include "modules/fluids/fluid_dynamics/model.hpp"
+#include "modules/fluids/fluid_dynamics/state.hpp"
+#include "modules/reservoir/1d/model.hpp"
+#include "modules/reservoir/1d/state.hpp"
+#include "modules/reservoir/2d/model.hpp"
+#include "modules/reservoir/2d/state.hpp"
 
 namespace py = pybind11;
 using namespace num;
 using namespace mod;
-using namespace top;
 
 /**
  * @brief Numerical Wrapper for Heat Simulations
@@ -50,7 +49,7 @@ public:
         auto integrator = std::make_shared<ImplicitEulerIntegrator>();
         auto solver = std::make_shared<LinearTridiagonalSolver>();
         auto linearizer = std::make_shared<NewtonRaphson>(1e-6, 1, false);
-        auto pm = std::make_shared<SerialParallelManager>();
+        auto pm = std::make_shared<utl::SerialParallelManager>();
 
         engine = std::make_unique<SimulationEngine>(spatial, mdl, discretizer, integrator, linearizer, solver, pm);
     }
@@ -95,7 +94,7 @@ public:
         auto integrator = std::make_shared<ImplicitEulerIntegrator>();
         auto solver = std::make_shared<BiCGSTABSolver>();
         auto linearizer = std::make_shared<NewtonRaphson>(1e-6, 1, false);
-        auto pm = std::make_shared<SerialParallelManager>();
+        auto pm = std::make_shared<utl::SerialParallelManager>();
 
         engine = std::make_unique<SimulationEngine>(spatial, mdl, discretizer, integrator, linearizer, solver, pm);
     }
@@ -137,7 +136,7 @@ public:
         auto integrator = std::make_shared<ImplicitEulerIntegrator>();
         auto solver = std::make_shared<LinearTridiagonalSolver>();
         auto linearizer = std::make_shared<NewtonRaphson>(1e-6, 1, false);
-        auto pm = std::make_shared<SerialParallelManager>();
+        auto pm = std::make_shared<utl::SerialParallelManager>();
 
         engine = std::make_unique<SimulationEngine>(spatial, mdl, discretizer, integrator, linearizer, solver, pm);
     }
@@ -179,7 +178,7 @@ public:
         auto integrator = std::make_shared<ImplicitEulerIntegrator>();
         auto solver = std::make_shared<LinearTridiagonalSolver>();
         auto linearizer = std::make_shared<NewtonRaphson>(1e-6, 1, false);
-        auto pm = std::make_shared<SerialParallelManager>();
+        auto pm = std::make_shared<utl::SerialParallelManager>();
 
         engine = std::make_unique<SimulationEngine>(spatial, mdl, discretizer, integrator, linearizer, solver, pm);
     }
@@ -223,7 +222,7 @@ public:
         auto integrator = std::make_shared<ImplicitEulerIntegrator>();
         auto solver = std::make_shared<LinearTridiagonalSolver>();
         auto linearizer = std::make_shared<NewtonRaphson>(1e-6, 20, true);
-        auto pm = std::make_shared<SerialParallelManager>();
+        auto pm = std::make_shared<utl::SerialParallelManager>();
 
         engine = std::make_unique<SimulationEngine>(spatial, mdl, discretizer, integrator, linearizer, solver, pm);
     }
@@ -252,8 +251,7 @@ private:
 
 public:
     StokesSimulationWrapper(int nx, int ny, double Lx, double Ly, double mu) {
-        auto mesh = std::make_shared<num::fem::Mesh>();
-        mesh->generate_quad_mesh(nx, ny, Lx, Ly);
+        auto mesh = std::make_shared<Mesh>(Mesh::generate_quad_mesh(Lx, Ly, nx, ny));
         st = std::make_shared<FluidState>(mesh);
         mdl = std::make_shared<FluidModel>(mesh, mu, 1.0);
         
@@ -261,9 +259,9 @@ public:
         auto integrator = std::make_shared<ImplicitEulerIntegrator>();
         auto solver = std::make_shared<BiCGSTABSolver>();
         auto linearizer = std::make_shared<NewtonRaphson>(1e-6, 1, false);
-        auto pm = std::make_shared<SerialParallelManager>();
+        auto pm = std::make_shared<utl::SerialParallelManager>();
 
-        engine = std::make_unique<SimulationEngine>(nullptr, mdl, discretizer, integrator, linearizer, solver, pm);
+        engine = std::make_unique<SimulationEngine>(mesh, mdl, discretizer, integrator, linearizer, solver, pm);
     }
 
     void set_boundary_condition(int node, double u, double v) {
@@ -304,7 +302,7 @@ public:
         auto integrator = std::make_shared<ImplicitEulerIntegrator>();
         auto solver = std::make_shared<LinearTridiagonalSolver>();
         auto linearizer = std::make_shared<NewtonRaphson>(1e-6, 1, false);
-        auto pm = std::make_shared<SerialParallelManager>();
+        auto pm = std::make_shared<utl::SerialParallelManager>();
 
         engine = std::make_unique<SimulationEngine>(spatial, mdl, discretizer, integrator, linearizer, solver, pm);
     }
@@ -351,7 +349,7 @@ public:
         auto integrator = std::make_shared<ImplicitEulerIntegrator>();
         auto solver = std::make_shared<BiCGSTABSolver>();
         auto linearizer = std::make_shared<NewtonRaphson>(1e-6, 1, false);
-        auto pm = std::make_shared<SerialParallelManager>();
+        auto pm = std::make_shared<utl::SerialParallelManager>();
 
         engine = std::make_unique<SimulationEngine>(spatial, mdl, discretizer, integrator, linearizer, solver, pm);
     }

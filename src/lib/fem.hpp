@@ -16,9 +16,10 @@
 #include <vector>
 #include <cmath>
 #include <array>
+#include "lib/interfaces.hpp"
 #include "lib/sparse.hpp"
 
-namespace mod {
+namespace geo {
 
 /**
  * @brief 2D Point/Node in space.
@@ -37,7 +38,7 @@ struct Element {
 /**
  * @brief Unstructured 2D Mesh.
  */
-struct Mesh : public top::IGrid {
+struct Mesh : public IGrid {
     std::vector<Node> nodes;
     std::vector<Element> elements;
     
@@ -75,6 +76,14 @@ struct Mesh : public top::IGrid {
     size_t num_nodes() const { return nodes.size(); }
     size_t num_elements() const { return elements.size(); }
 };
+
+} // namespace geo
+
+namespace mod {
+
+using Node = geo::Node;
+using Element = geo::Element;
+using Mesh = geo::Mesh;
 
 /**
  * @brief Mathematical Toolbox for Linear Triangle Elements (P1).

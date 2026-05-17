@@ -2,7 +2,14 @@
 #include "lib/interfaces.hpp"
 
 namespace mod::reservoir {
-using namespace top;
+
+/**
+ * @brief Single-cell grid for 0D tank simulations.
+ */
+class MBAGrid : public IGrid {
+public:
+    size_t get_total_cells() const override { return 1; }
+};
 
 /**
  * @brief State representing a 0D Tank (Pressure only).

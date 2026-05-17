@@ -1,0 +1,19 @@
+# Export Configuration
+export_dir = exports
+project_name = fluid_fem
+enable_vtk = 0
+enable_json = 0
+enable_csv = 0
+log_frequency = 1
+export_frequency = 10
+
+# Parameters
+nx = 10
+ny = 10
+L = 1.0
+H = 1.0
+dt = 1.0
+t_end = 1.0
+mu = 0.01
+rho = 1.0
+num_threads = 4

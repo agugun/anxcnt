@@ -5,7 +5,6 @@
 #include <algorithm>
 
 namespace mod::reservoir {
-using namespace top;
 
 /**
  * @brief State representing the Dual-Phase system (Pressure and Water Saturation).
@@ -27,7 +26,7 @@ public:
         for (size_t i = 0; i < variables.size(); i += 2) {
             variables[i] += delta[i];
             variables[i + 1] += delta[i + 1];
-            
+
             // Physical boundaries
             variables[i] = std::max(14.7, variables[i]);
             variables[i + 1] = std::max(0.0, std::min(1.0, variables[i + 1]));

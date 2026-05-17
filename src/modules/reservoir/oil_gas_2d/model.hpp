@@ -5,24 +5,23 @@
 #include <vector>
 
 namespace mod::reservoir {
-using namespace top;
 
 /**
  * @brief 2D Oil-Gas Reservoir Physical Model (Properties).
  */
 class OilGas2DModel : public IModel {
 public:
-    double mu_o, mu_g; 
+    double mu_o, mu_g;
     double bo;         // Oil formation volume factor (assumed constant)
-    double p_std, bg_std; 
+    double p_std, bg_std;
     std::shared_ptr<num::discretization::Conductance2D> rock_cond;
-    double pore_vol_per_cell; 
+    double pore_vol_per_cell;
     std::vector<std::shared_ptr<ISourceSink>> wells;
 
-    OilGas2DModel(std::shared_ptr<num::discretization::Conductance2D> cond, double pv, 
+    OilGas2DModel(std::shared_ptr<num::discretization::Conductance2D> cond, double pv,
                   double mo, double mg, double b_o, double ps, double bgs,
                   const std::vector<std::shared_ptr<ISourceSink>>& wells_val)
-        : rock_cond(cond), pore_vol_per_cell(pv), mu_o(mo), mu_g(mg), 
+        : rock_cond(cond), pore_vol_per_cell(pv), mu_o(mo), mu_g(mg),
           bo(b_o), p_std(ps), bg_std(bgs), wells(wells_val) {}
 
     double get_bg(double p) const { return bg_std * (p_std / std::max(1.0, p)); }
@@ -36,7 +35,7 @@ public:
         krog = (1.0 - sge) * (1.0 - sge);
     }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         size_t n = st.to_vector().size();
         return Vector(n, pore_vol_per_cell);
     }

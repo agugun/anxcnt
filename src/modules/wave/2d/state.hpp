@@ -3,7 +3,6 @@
 #include "lib/interfaces.hpp"
 
 namespace mod::wave {
-using namespace top;
 
 class Wave2DState : public IState {
 public:
@@ -11,7 +10,7 @@ public:
     Vector v; // Velocity
     std::shared_ptr<Spatial2D> spatial;
 
-    Wave2DState(std::shared_ptr<Spatial2D> s) 
+    Wave2DState(std::shared_ptr<Spatial2D> s)
         : u(s->total_size(), 0.0), v(s->total_size(), 0.0), spatial(s) {}
 
     void update(const std::vector<double>& delta) override {

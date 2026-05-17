@@ -4,9 +4,8 @@
 #include "../pvt.hpp"
 #include "lib/discretization.hpp"
 #include <vector>
- 
+
 namespace mod::reservoir {
-using namespace top;
 
 /**
  * @brief 2D Black Oil Physical Model (Properties and Mobilities).
@@ -15,10 +14,10 @@ class BlackOil2DModel : public IModel {
 public:
     BlackOilPVT pvt;
     std::shared_ptr<num::discretization::Conductance2D> rock_cond;
-    double pore_vol_per_cell; 
+    double pore_vol_per_cell;
     std::vector<std::shared_ptr<ISourceSink>> wells;
 
-    BlackOil2DModel(std::shared_ptr<num::discretization::Conductance2D> cond, double pv, 
+    BlackOil2DModel(std::shared_ptr<num::discretization::Conductance2D> cond, double pv,
                     const std::vector<std::shared_ptr<ISourceSink>>& wells_val)
         : rock_cond(cond), pore_vol_per_cell(pv), wells(wells_val) {}
 
@@ -36,9 +35,9 @@ public:
         krog = std::pow(std::max(0.0, std::min(1.0, soe)), 3.0);
     }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         // For Black Oil, weights are not constant (they depend on P, Sw, Sg).
-        // However, the ITimeIntegrator calls this. 
+        // However, the ITimeIntegrator calls this.
         // In FIM, we usually handle accumulation directly in Discretizer or use a dummy.
         // Let's return pore volume as a base.
         size_t n = grd.get_total_cells();
@@ -66,22 +65,22 @@ public:
             for (int i = 0; i < nx; ++i) {
                 int c = s.spatial->idx(i, j);
                 double p = s.p(c), sw = s.sw(c), sg = s.sg(c), so = 1.0 - sw - sg;
-                
+
                 // 1. Accumulation Sensitivities (Simplified diagonal blocks)
                 double bw = m.pvt.get_bw(p), bo = m.pvt.get_bo(p, m.pvt.get_rs(p)), bg = m.pvt.get_bg(p);
-                // (Pore volume is handled in add_accumulation via weights if needed, 
+                // (Pore volume is handled in add_accumulation via weights if needed,
                 // but here we are doing FIM assembly)
                 // For simplicity, we add the accumulation diagonal terms here:
                 J.triplets.push_back({3 * c, 3 * c + 1, 1.0 / bw}); // dRw/dSw
                 J.triplets.push_back({3 * c + 1, 3 * c + 1, -1.0 / bo}); // dRo/dSw
                 J.triplets.push_back({3 * c + 1, 3 * c + 2, -1.0 / bo}); // dRo/dSg
-                
+
                 // 2. Flux Sensitivities (Inter-cell Transmissibilities)
                 auto add_flux_jac = [&](int n_idx, double t_rock) {
                     int up = (s.p(c) > s.p(n_idx)) ? c : n_idx;
                     double krw, krog, krg;
                     m.get_rel_perm(s.sw(up), s.sg(up), krw, krog, krg);
-                    
+
                     double p_up = s.p(up);
                     double rs_u = m.pvt.get_rs(p_up);
                     double muw = m.pvt.get_mu_w(p_up), muo = m.pvt.get_mu_o(p_up, rs_u), mug = m.pvt.get_mu_g(p_up);
@@ -126,7 +125,7 @@ public:
                     int up = (p_c > p_n) ? c : n_idx;
                     double krw_u, krog_u, krg_u;
                     m.get_rel_perm(s.sw(up), s.sg(up), krw_u, krog_u, krg_u);
-                    
+
                     double p_u = s.p(up);
                     double rs_u = m.pvt.get_rs(p_u);
                     double lam_w = krw_u / (m.pvt.get_mu_w(p_u) * m.pvt.get_bw(p_u));

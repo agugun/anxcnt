@@ -9,7 +9,9 @@ ext_module = Pybind11Extension(
     include_dirs=[
         os.path.abspath("../../src"), # To find case/ and lib/
     ],
-    cxx_std=14,
+    cxx_std=17,
+    extra_compile_args=["-fopenmp"],
+    extra_link_args=["-fopenmp"],
 )
 
 setup(

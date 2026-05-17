@@ -15,10 +15,11 @@
 #include <memory>
 
 namespace utl {
+using namespace mod;
 
-class StandardLogger : public top::IObserver {
+class StandardLogger : public IObserver {
 public:
-    using FieldExtractor = std::function<std::vector<double>(const top::IState&)>;
+    using FieldExtractor = std::function<std::vector<double>(const IState&)>;
 
     struct Config {
         std::string export_dir = "exports";
@@ -48,12 +49,12 @@ public:
     }
 
     // IObserver implementation
-    void on_simulation_start(const top::IGrid& grid) override {
+    void on_simulation_start(const geo::IGrid& grid) override {
         std::cout << "--- Simulation START ---\n";
         step = 0;
     }
 
-    void on_step_complete(double t, int step_idx, const top::IState& state) override {
+    void on_step_complete(double t, int step_idx, const IState& state) override {
         step = step_idx;
         if (step % params.terminal_freq == 0) {
             log_terminal(t, state);
@@ -68,12 +69,12 @@ public:
     }
 
 private:
-    void log_terminal(double t, const top::IState& state) {
+    void log_terminal(double t, const IState& state) {
         std::cout << "Time: " << std::fixed << std::setprecision(4) << t 
                   << " | Step: " << step << "\n";
     }
 
-    void export_data(double t, const top::IState& state) {
+    void export_data(double t, const IState& state) {
         if (!params.enable_vtk && !params.enable_csv) return;
 
         std::vector<VTKField> vtk_fields;

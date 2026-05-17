@@ -16,8 +16,8 @@ namespace mod::reservoir {
 class OilGas2DImplicitSimulation {
 public:
     struct BuildResult {
-        std::unique_ptr<top::SimulationEngine> engine;
-        std::unique_ptr<top::IState> st_init;
+        std::unique_ptr<num::SimulationEngine> engine;
+        std::unique_ptr<IState> st_init;
         std::shared_ptr<utl::StandardLogger> logger;
     };
 
@@ -29,22 +29,22 @@ public:
         double k = config.get("k", 100.0);
         double phi = config.get("phi", 0.2);
         double area = config.get("area", 1.0);
-        
+
         // 1. Grid and State
         auto spatial = std::make_shared<Spatial2D>(nx, ny, dx, dy);
         auto st = std::make_unique<ReservoirOilGas2DState>(spatial, config.get("p_init", 2000.0), config.get("sg_init", 0.0));
-        
+
         // 2. Physics Model and Discretization
         auto cond = num::discretization::pressure_cond_2d(nx, ny, dx, dy, k, 1.0, area); // mu=1 stub
         double pv = dx * dy * area * phi;
-        
+
         // Wells
         std::vector<std::shared_ptr<ISourceSink>> wells;
         auto idx_func = [nx, ny](int i, int j) { return j * (int)nx + i; };
 
         // Simple Producer at top-right
         wells.push_back(std::make_shared<ConstantRateWell>(
-            (int)nx-1, (int)ny-1, (int)nx-1, (int)ny-1, -std::abs(config.get("q_producer", 500.0)), 1.0, 
+            (int)nx-1, (int)ny-1, (int)nx-1, (int)ny-1, -std::abs(config.get("q_producer", 500.0)), 1.0,
             [nx, ny](int i, int j, int k) { return j * (int)nx + i; }
         ));
 
@@ -53,33 +53,33 @@ public:
             config.get("bo", 1.2), 14.7, 1.0, wells
         );
         auto discretizer = std::make_shared<OilGas2DDiscretizer>();
-        
+
         // 3. Engine Components
         auto timer = std::make_shared<num::ImplicitEulerIntegrator>();
         auto linearizer = std::make_shared<num::NewtonRaphson>(1e-4, 12, true);
         auto solver = std::make_shared<num::BiCGSTABSolver>();
         solver->verbose = false;
-        
-        auto pm = std::make_shared<top::SerialParallelManager>();
 
-        auto engine = std::make_unique<top::SimulationEngine>(spatial, mdl, discretizer, timer, linearizer, solver, pm);
+        auto pm = std::make_shared<utl::SerialParallelManager>();
+
+        auto engine = std::make_unique<num::SimulationEngine>(spatial, mdl, discretizer, timer, linearizer, solver, pm);
 
         // 4. Logger / Observer setup
         auto logger = std::make_shared<utl::StandardLogger>(config);
         logger->set_grid(nx, ny, 1, dx);
-        logger->add_field("Pressure", [](const top::IState& s) {
+        logger->add_field("Pressure", [](const IState& s) {
             auto v = s.to_vector();
             Vector p(v.size() / 2);
             for (size_t i = 0; i < p.size(); ++i) p[i] = v[2 * i];
             return p;
         });
-        logger->add_field("GasSat", [](const top::IState& s) {
+        logger->add_field("GasSat", [](const IState& s) {
             auto v = s.to_vector();
             Vector sg(v.size() / 2);
             for (size_t i = 0; i < sg.size(); ++i) sg[i] = v[2 * i + 1];
             return sg;
         });
-        
+
         engine->add_observer(logger);
 
         return { std::move(engine), std::move(st), logger };

@@ -4,9 +4,8 @@
 #include "../pvt.hpp"
 #include "lib/discretization.hpp"
 #include <vector>
- 
+
 namespace mod::reservoir {
-using namespace top;
 
 /**
  * @brief 3D Black Oil Physical Model (Properties and Mobilities).
@@ -15,10 +14,10 @@ class BlackOil3DModel : public IModel {
 public:
     BlackOilPVT pvt;
     std::shared_ptr<num::discretization::Conductance3D> rock_cond;
-    double pore_vol_per_cell; 
+    double pore_vol_per_cell;
     std::vector<std::shared_ptr<ISourceSink>> wells;
 
-    BlackOil3DModel(std::shared_ptr<num::discretization::Conductance3D> cond, double pv, 
+    BlackOil3DModel(std::shared_ptr<num::discretization::Conductance3D> cond, double pv,
                     const std::vector<std::shared_ptr<ISourceSink>>& wells_val)
         : rock_cond(cond), pore_vol_per_cell(pv), wells(wells_val) {}
 
@@ -35,7 +34,7 @@ public:
         krog = std::pow(std::max(0.0, std::min(1.0, soe)), 3.0);
     }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         size_t n = grd.get_total_cells();
         return Vector(3 * n, pore_vol_per_cell);
     }
@@ -67,9 +66,9 @@ public:
                     int c = s.spatial->idx(i, j, k);
                     double p = s.p(c), sw = s.sw(c), sg = s.sg(c);
                     double bw = m.pvt.get_bw(p), bo = m.pvt.get_bo(p, m.pvt.get_rs(p));
-                    
+
                     // Diagonal block accumulation coupling
-                    J.triplets.push_back({3 * c, 3 * c + 1, 1.0 / bw}); 
+                    J.triplets.push_back({3 * c, 3 * c + 1, 1.0 / bw});
                     J.triplets.push_back({3 * c + 1, 3 * c + 1, -1.0 / bo});
                     J.triplets.push_back({3 * c + 1, 3 * c + 2, -1.0 / bo});
 
@@ -77,7 +76,7 @@ public:
                         int up = (s.p(c) > s.p(n_idx)) ? c : n_idx;
                         double krw, krog, krg;
                         m.get_rel_perm(s.sw(up), s.sg(up), krw, krog, krg);
-                        
+
                         double p_up = s.p(up);
                         double rs_u = m.pvt.get_rs(p_up);
                         double bwu = m.pvt.get_bw(p_up), bou = m.pvt.get_bo(p_up, rs_u), bgu = m.pvt.get_bg(p_up);
@@ -126,7 +125,7 @@ public:
                         int up = (p_c > p_n) ? c : n_idx;
                         double krw_u, krog_u, krg_u;
                         m.get_rel_perm(s.sw(up), s.sg(up), krw_u, krog_u, krg_u);
-                        
+
                         double p_u = s.p(up);
                         double rs_u = m.pvt.get_rs(p_u);
                         double lam_w = krw_u / (m.pvt.get_mu_w(p_u) * m.pvt.get_bw(p_u));

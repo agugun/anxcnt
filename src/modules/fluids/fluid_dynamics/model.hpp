@@ -5,7 +5,6 @@
 #include <vector>
 
 namespace mod {
-using namespace top;
 
 /**
  * @brief 2D Incompressible Fluid Model (Stokes / Low-Re Navier-Stokes).
@@ -19,7 +18,7 @@ public:
     std::vector<double> velocity_bc_values_u;
     std::vector<double> velocity_bc_values_v;
 
-    FluidModel(std::shared_ptr<Mesh> m, double viscosity, double density) 
+    FluidModel(std::shared_ptr<Mesh> m, double viscosity, double density)
         : mu(viscosity), rho(density), mesh(m) {}
 
     void set_velocity_bc(int node_idx, double u_val, double v_val) {
@@ -30,8 +29,8 @@ public:
 
     double get_tolerance() const override { return 1e-6; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
-        // Steady st or semi-implicit: return zero weights for pressure and 
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
+        // Steady st or semi-implicit: return zero weights for pressure and
         // identity-like weights for momentum if transient is needed.
         // For Stokes, return zero for now.
         return Vector(3 * mesh->num_nodes(), 0.0);
@@ -46,7 +45,7 @@ public:
     void build_jacobian(const IGrid& grd, const IModel& mdl, const IState& st, SparseMatrix& J) const override {
         const auto& m = static_cast<const FluidModel&>(mdl);
         size_t n = m.mesh->num_nodes();
-        
+
         if (J.rows != 3 * n) J = SparseMatrix(3 * n, 3 * n);
         J.triplets.clear();
 
@@ -58,17 +57,17 @@ public:
         }
 
         for (const auto& el : m.mesh->elements) {
-            auto data = LinearTriangle::compute_data(m.mesh->nodes[el.nodes[0]], 
-                                                   m.mesh->nodes[el.nodes[1]], 
+            auto data = LinearTriangle::compute_data(m.mesh->nodes[el.nodes[0]],
+                                                   m.mesh->nodes[el.nodes[1]],
                                                    m.mesh->nodes[el.nodes[2]]);
-            
+
             for (int i = 0; i < 3; ++i) {
                 int row = el.nodes[i];
                 for (int j = 0; j < 3; ++j) {
                     int col = el.nodes[j];
-                    
+
                     double diff = m.mu * (data.dNdx[i] * data.dNdx[j] + data.dNdy[i] * data.dNdy[j]) * data.area;
-                    
+
                     // Momentum rows
                     if (!is_bc_u[row]) {
                         J.triplets.push_back({ row, col, diff });
@@ -78,7 +77,7 @@ public:
                         J.triplets.push_back({ row + (int)n, col + (int)n, diff });
                         J.triplets.push_back({ row + (int)n, col + 2 * (int)n, data.dNdy[i] * (data.area / 3.0) });
                     }
-                    
+
                     // Continuity (Pressure) row
                     J.triplets.push_back({ row + 2 * (int)n, col, data.dNdx[j] * (data.area / 3.0) });
                     J.triplets.push_back({ row + 2 * (int)n, col + (int)n, data.dNdy[j] * (data.area / 3.0) });
@@ -105,23 +104,23 @@ public:
 
         // Element Assembly
         for (const auto& el : m.mesh->elements) {
-            auto data = LinearTriangle::compute_data(m.mesh->nodes[el.nodes[0]], 
-                                                   m.mesh->nodes[el.nodes[1]], 
+            auto data = LinearTriangle::compute_data(m.mesh->nodes[el.nodes[0]],
+                                                   m.mesh->nodes[el.nodes[1]],
                                                    m.mesh->nodes[el.nodes[2]]);
-            
+
             for (int i = 0; i < 3; ++i) {
                 int row = el.nodes[i];
                 for (int j = 0; j < 3; ++j) {
                     int col = el.nodes[j];
                     double diff = m.mu * (data.dNdx[i] * data.dNdx[j] + data.dNdy[i] * data.dNdy[j]) * data.area;
-                    
+
                     if (!is_bc_u[row]) {
                         R[row] += diff * s.u[col] + data.dNdx[i] * (data.area / 3.0) * s.p[col];
                     }
                     if (!is_bc_v[row]) {
                         R[row + n] += diff * s.v[col] + data.dNdy[i] * (data.area / 3.0) * s.p[col];
                     }
-                    
+
                     R[row + 2 * n] += (data.dNdx[j] * s.u[col] + data.dNdy[j] * s.v[col]) * (data.area / 3.0);
                     // PSPG Stability part in Residual
                     double tau = (data.area) / (12.0 * m.mu);

@@ -16,8 +16,8 @@ namespace mod::reservoir {
 class BlackOil3DImplicitSimulation {
 public:
     struct BuildResult {
-        std::unique_ptr<top::SimulationEngine> engine;
-        std::unique_ptr<top::IState> st_init;
+        std::unique_ptr<num::SimulationEngine> engine;
+        std::unique_ptr<IState> st_init;
         std::shared_ptr<utl::StandardLogger> logger;
     };
 
@@ -31,19 +31,19 @@ public:
         double k = config.get("k", 100.0);
         double phi = config.get("phi", 0.2);
         double area = config.get("area", 1.0);
-        
+
         // 1. Grid and State
         auto spatial = std::make_shared<Spatial3D>(nx, ny, nz, dx, dy, dz);
         auto st = std::make_unique<ReservoirBlackOil3DState>(spatial);
-        
+
         // 2. Physics Model and Discretization
         auto cond = num::discretization::pressure_cond_3d(nx, ny, nz, dx, dy, dz, k, area);
         double pv = dx * dy * dz * area * phi;
-        
+
         // Wells
         std::vector<std::shared_ptr<ISourceSink>> wells;
         auto idx_func = [nx, ny, nz](int i, int j, int k) { return (int)((k * ny + j) * nx + i); };
-        auto var_func = [](const top::IState& s, int i, int j, int k, double& p, double& sw, double& sg) {
+        auto var_func = [](const IState& s, int i, int j, int k, double& p, double& sw, double& sg) {
             const auto& bo_s = static_cast<const ReservoirBlackOil3DState&>(s);
             int idx = bo_s.spatial->idx(i, j, k);
             p = bo_s.p(idx);
@@ -62,29 +62,29 @@ public:
 
         auto mdl = std::make_shared<BlackOil3DModel>(cond, pv, wells);
         auto discretizer = std::make_shared<BlackOil3DDiscretizer>();
-        
+
         // 3. Engine Components
         auto timer = std::make_shared<num::ImplicitEulerIntegrator>();
         auto linearizer = std::make_shared<num::NewtonRaphson>(1e-4, 15, true);
-        
+
         // Large 3D Block System, BiCGSTAB is required
         auto solver = std::make_shared<num::BiCGSTABSolver>();
         solver->verbose = false;
-        
-        auto pm = std::make_shared<top::SerialParallelManager>();
 
-        auto engine = std::make_unique<top::SimulationEngine>(spatial, mdl, discretizer, timer, linearizer, solver, pm);
+        auto pm = std::make_shared<utl::SerialParallelManager>();
+
+        auto engine = std::make_unique<num::SimulationEngine>(spatial, mdl, discretizer, timer, linearizer, solver, pm);
 
         // 4. Logger / Observer setup
         auto logger = std::make_shared<utl::StandardLogger>(config);
         logger->set_grid(nx, ny, nz, dx);
-        logger->add_field("Pressure", [](const top::IState& s) {
+        logger->add_field("Pressure", [](const IState& s) {
             auto v = s.to_vector();
             Vector p(v.size() / 3);
             for (size_t i = 0; i < p.size(); ++i) p[i] = v[3 * i];
             return p;
         });
-        
+
         engine->add_observer(logger);
 
         return { std::move(engine), std::move(st), logger };

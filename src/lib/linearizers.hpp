@@ -8,7 +8,7 @@
 #include <cmath>
 
 namespace num {
-using namespace top;
+using namespace mod;
 
 /**
  * @brief Standard Newton-Raphson non-linear solver.
@@ -29,26 +29,26 @@ public:
     }
 
     std::unique_ptr<IState> resolve(
-        const IState& st_n, double dt, 
-        const IGrid& grd, const IModel& mdl, const IDiscretizer& discretizer,
-        const ITimeIntegrator& timer, ISolver& solver, const IParallelManager& pm) override 
+        const IState& st_n, double dt,
+        const geo::IGrid& grd, const IModel& mdl, const IDiscretizer& discretizer,
+        const ITimeIntegrator& timer, ISolver& solver, const utl::IParallelManager& pm) override
     {
         auto st_guess = st_n.clone();
         bool converged = false;
-        size_t n_cells = grd.get_total_cells();
+        size_t system_size = st_n.to_vector().size();
 
         // SparseMatrix initialization logic
-        SparseMatrix J(n_cells, n_cells);
-        Vector R(n_cells, 0.0);
+        SparseMatrix J(system_size, system_size);
+        Vector R(system_size, 0.0);
 
         for (int iter = 0; iter < max_iter; ++iter) {
             // 1. Parallel Sync (Update ghost/halo cells)
             pm.sync_ghost_cells(*st_guess);
 
             // Reset Residual and Jacobian triplets (Assembly logic)
-            R.assign(n_cells, 0.0);
+            R.assign(system_size, 0.0);
             J.clear();
-            
+
             // 2. Spatial Assembly (Fluxes and properties)
             discretizer.build_jacobian(grd, mdl, *st_guess, J);
             discretizer.build_residual(grd, mdl, *st_guess, R);
@@ -82,7 +82,7 @@ public:
             // We pass -R to the solver
             Vector neg_R = R;
             for (auto& val : neg_R) val *= -1.0;
-            
+
             Vector delta_x = solver.solve(J, neg_R);
 
             // 8. Safely Update State
@@ -110,22 +110,22 @@ public:
     }
 
     std::unique_ptr<IState> resolve(
-        const IState& st_n, double dt, 
-        const IGrid& grd, const IModel& mdl, const IDiscretizer& discretizer,
-        const ITimeIntegrator& timer, ISolver& solver, const IParallelManager& pm) override 
+        const IState& st_n, double dt,
+        const geo::IGrid& grd, const IModel& mdl, const IDiscretizer& discretizer,
+        const ITimeIntegrator& timer, ISolver& solver, const utl::IParallelManager& pm) override
     {
         auto st_guess = st_n.clone();
-        size_t n_cells = grd.get_total_cells();
+        size_t system_size = st_n.to_vector().size();
 
-        Vector R(n_cells, 0.0);
-        
+        Vector R(system_size, 0.0);
+
         // 1. Parallel Sync
         pm.sync_ghost_cells(*st_guess);
 
         // 2. Spatial Assembly (Fluxes only, no Jacobian needed for Pure Explicit)
         discretizer.build_residual(grd, mdl, st_n, R);
 
-        // 3. Source/Sink Assembly 
+        // 3. Source/Sink Assembly
         SparseMatrix J_dummy(0,0); // Dummy for explicit
         for (auto& source : sources) {
             source->assemble_terms(st_n, J_dummy, R);

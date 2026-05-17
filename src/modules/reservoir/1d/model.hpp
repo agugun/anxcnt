@@ -5,7 +5,6 @@
 #include "modules/reservoir/well.hpp"
 
 namespace mod {
-using namespace top;
 
 /**
  * @brief 1D Reservoir Physical Model (Properties).
@@ -16,16 +15,16 @@ public:
     Vector storage_coeff;
     std::vector<std::shared_ptr<ISourceSink>> wells;
 
-    Reservoir1DModel(std::shared_ptr<num::discretization::Conductance1D> c, const Vector& storage, 
+    Reservoir1DModel(std::shared_ptr<num::discretization::Conductance1D> c, const Vector& storage,
                      const std::vector<std::shared_ptr<ISourceSink>>& wells_val)
         : cond(c), storage_coeff(storage), wells(wells_val) {}
 
     double get_tolerance() const override { return 1e-4; }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         return storage_coeff;
     }
-    
+
     const std::vector<std::shared_ptr<ISourceSink>>& get_sources() const {
         return wells;
     }

@@ -1,6 +1,6 @@
-#include "modules/reservoir/well.hpp"
 #pragma once
 #include "lib/simulation.hpp"
+#include "modules/reservoir/well.hpp"
 #include "lib/linearizers.hpp"
 #include "lib/engine_infra.hpp"
 #include "lib/discretization.hpp"
@@ -16,8 +16,8 @@ namespace mod::reservoir {
 class Reservoir1DImplicitSimulation {
 public:
     struct BuildResult {
-        std::unique_ptr<top::SimulationEngine> engine;
-        std::unique_ptr<top::IState> st_init;
+        std::unique_ptr<num::SimulationEngine> engine;
+        std::unique_ptr<IState> st_init;
         std::shared_ptr<utl::StandardLogger> logger;
     };
 
@@ -29,15 +29,15 @@ public:
         double mu = config.get("mu", 1.0);
         double ct = config.get("ct", 1e-6);
         double area = config.get("area", 100.0);
-        
+
         // 1. Grid and State
         auto spatial = std::make_shared<Spatial1D>(nx, dx);
         auto st = std::make_unique<Reservoir1DState>(spatial, config.get("p_initial", 2000.0));
-        
+
         // 2. Physics Model and Discretization
         auto cond = num::discretization::pressure_cond_1d(nx, dx, k, mu, area);
         Vector storage = num::discretization::pressure_storage(nx, dx * area, phi, ct);
-        
+
         // Wells
         std::vector<std::shared_ptr<ISourceSink>> wells;
         if (config.get("q_well", 0.0) != 0.0) {
@@ -49,22 +49,22 @@ public:
 
         auto mdl = std::make_shared<Reservoir1DModel>(cond, storage, wells);
         auto discretizer = std::make_shared<Reservoir1DDiscretizer>();
-        
+
         // 3. Engine Components
         auto timer = std::make_shared<num::ImplicitEulerIntegrator>();
         auto linearizer = std::make_shared<num::NewtonRaphson>(1e-4, 12, true);
         auto solver = std::make_shared<num::LinearTridiagonalSolver>();
-        auto pm = std::make_shared<top::SerialParallelManager>();
+        auto pm = std::make_shared<utl::SerialParallelManager>();
 
-        auto engine = std::make_unique<top::SimulationEngine>(spatial, mdl, discretizer, timer, linearizer, solver, pm);
+        auto engine = std::make_unique<num::SimulationEngine>(spatial, mdl, discretizer, timer, linearizer, solver, pm);
 
         // 4. Logger / Observer setup
         auto logger = std::make_shared<utl::StandardLogger>(config);
         logger->set_grid(nx, 1, 1, dx);
-        logger->add_field("Pressure", [](const top::IState& s) {
+        logger->add_field("Pressure", [](const IState& s) {
             return s.to_vector();
         });
-        
+
         engine->add_observer(logger);
 
         return { std::move(engine), std::move(st), logger };

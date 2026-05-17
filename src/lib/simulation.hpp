@@ -1,41 +1,44 @@
 /**
  * @file simulation.hpp
- * @brief High-level Orchestrator for Time-Stepped Simulations.
+ * @brief Template-Based Simulation Framework for Physics Modules.
  */
 #pragma once
 #include "interfaces.hpp"
+#include "utils/config_reader.hpp"
+#include <cmath>
 #include <vector>
 #include <memory>
 
-namespace top {
+namespace sim {
+using namespace mod;
 
-class SimulationEngine {
-private:
-    std::shared_ptr<IGrid> grd;
+/**
+ * @brief Base class for all physics-specific simulations.
+ * Acts as both a Factory (build) and an Orchestrator (run).
+ */
+class Simulation {
+protected:
+    std::shared_ptr<geo::IGrid> grd;
     std::shared_ptr<IModel> mdl;
     std::shared_ptr<IDiscretizer> discretizer;
-    std::shared_ptr<ITimeIntegrator> timer;
-    std::shared_ptr<ILinearizer> linearizer;
-    std::shared_ptr<ISolver> solver;
-    std::shared_ptr<IParallelManager> parallel;
+    std::shared_ptr<num::ITimeIntegrator> timer;
+    std::shared_ptr<num::ILinearizer> linearizer;
+    std::shared_ptr<num::ISolver> solver;
+    std::shared_ptr<utl::IParallelManager> parallel;
     std::vector<std::shared_ptr<ISourceSink>> sources;
-    std::vector<std::shared_ptr<IObserver>> observers;
+    std::vector<std::shared_ptr<utl::IObserver>> observers;
 
 public:
-    SimulationEngine(std::shared_ptr<IGrid> g,
-                     std::shared_ptr<IModel> m,
-                     std::shared_ptr<IDiscretizer> d,
-                     std::shared_ptr<ITimeIntegrator> t,
-                     std::shared_ptr<ILinearizer> l,
-                     std::shared_ptr<ISolver> s,
-                     std::shared_ptr<IParallelManager> p,
-                     std::vector<std::shared_ptr<ISourceSink>> src = {})
-        : grd(g), mdl(m), discretizer(d), timer(t), linearizer(l), 
-          solver(s), parallel(p), sources(std::move(src)) {
-        if (linearizer) linearizer->set_sources(sources);
-    }
+    Simulation() = default;
+    virtual ~Simulation() = default;
 
-    void add_observer(std::shared_ptr<IObserver> ob) {
+    /**
+     * @brief Factory Method: Assembles the module-specific components.
+     * Must be implemented by each physics case.
+     */
+    virtual void build(const utl::ConfigReader& config) = 0;
+
+    void add_observer(std::shared_ptr<utl::IObserver> ob) {
         observers.push_back(ob);
     }
 
@@ -62,16 +65,18 @@ public:
         auto st_n = std::move(st_init);
         double t = 0.0;
         int step_count = 0;
+        const double time_epsilon = 1e-12 * (std::abs(t_max) + 1.0);
 
         for (auto& obs : observers) obs->on_simulation_start(*grd);
         for (auto& obs : observers) obs->on_step_complete(t, step_count, *st_n);
 
-        while (t < t_max) {
-            double dt = timer->compute_dt(*st_n, t);
+        while (t + time_epsilon < t_max) {
+            double dt = dt_initial > 0.0 ? dt_initial : timer->compute_dt(*st_n, t);
             if (t + dt > t_max) dt = t_max - t;
+            if (dt <= time_epsilon) break;
 
             st_n = step(t, dt, *st_n, step_count + 1);
-            
+
             t += dt;
             step_count++;
         }
@@ -81,4 +86,39 @@ public:
     }
 };
 
-} // namespace top
+} // namespace sim
+
+namespace num {
+using namespace sim;
+
+/**
+ * @brief Compatibility layer for manual assembly pattern.
+ * @deprecated Use sim::Simulation inheritance instead.
+ */
+class SimulationEngine : public Simulation {
+public:
+    SimulationEngine(std::shared_ptr<geo::IGrid> g,
+                     std::shared_ptr<IModel> m,
+                     std::shared_ptr<IDiscretizer> d,
+                     std::shared_ptr<num::ITimeIntegrator> t,
+                     std::shared_ptr<num::ILinearizer> l,
+                     std::shared_ptr<num::ISolver> s,
+                     std::shared_ptr<utl::IParallelManager> p,
+                     std::vector<std::shared_ptr<ISourceSink>> src = {}) {
+        this->grd = g;
+        this->mdl = m;
+        this->discretizer = d;
+        this->timer = t;
+        this->linearizer = l;
+        this->solver = s;
+        this->parallel = p;
+        this->sources = std::move(src);
+        if (this->linearizer) this->linearizer->set_sources(this->sources);
+    }
+
+    void build(const utl::ConfigReader& config) override {
+        // Already built via constructor
+    }
+};
+
+} // namespace num

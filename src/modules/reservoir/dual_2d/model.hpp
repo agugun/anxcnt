@@ -5,7 +5,6 @@
 #include <vector>
 
 namespace mod::reservoir {
-using namespace top;
 
 /**
  * @brief 2D Dual-Phase (Oil-Water) Reservoir Physical Model (Properties).
@@ -17,11 +16,11 @@ public:
     double sw_res;     // residual water saturation
     double so_res;     // residual oil saturation
     std::shared_ptr<num::discretization::Conductance2D> rock_cond;
-    double pore_vol_per_cell; 
+    double pore_vol_per_cell;
 
-    DualPhase2DModel(std::shared_ptr<num::discretization::Conductance2D> cond, double pv, double mw, double mo, 
+    DualPhase2DModel(std::shared_ptr<num::discretization::Conductance2D> cond, double pv, double mw, double mo,
                      const std::vector<std::shared_ptr<ISourceSink>>& wells_val)
-        : rock_cond(cond), pore_vol_per_cell(pv), mu_w(mw), mu_o(mo), wells(wells_val), 
+        : rock_cond(cond), pore_vol_per_cell(pv), mu_w(mw), mu_o(mo), wells(wells_val),
           sw_res(0.2), so_res(0.2) {}
 
     double get_tolerance() const override { return 1e-4; }
@@ -33,7 +32,7 @@ public:
         kro = (1.0 - swe) * (1.0 - swe);
     }
 
-    Vector get_accumulation_weights(const IGrid& grd, const IState& st) const override {
+    Vector build_capacity(const IGrid& grd, const IState& st) const override {
         size_t n = st.to_vector().size();
         return Vector(n, pore_vol_per_cell);
     }
@@ -57,7 +56,7 @@ public:
         for (int j = 0; j < ny; ++j) {
             for (int i = 0; i < nx; ++i) {
                 int c = s.spatial->idx(i, j);
-                
+
                 // Diagonal accumulation sensitivities
                 J.triplets.push_back({2 * c, 2 * c, 1e-4}); // Compressibility
                 J.triplets.push_back({2 * c, 2 * c + 1, 1.0}); // dRw/dSw
@@ -67,7 +66,7 @@ public:
                     int up = (s.p(c) > s.p(n_idx)) ? c : n_idx;
                     double krw, kro;
                     m.get_rel_perm(s.sw(up), krw, kro);
-                    
+
                     double Tw = t_rock * (krw / m.mu_w);
                     double To = t_rock * (kro / m.mu_o);
 

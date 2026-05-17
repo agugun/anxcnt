@@ -3,7 +3,6 @@
 #include "lib/interfaces.hpp"
 
 namespace mod {
-using namespace top;
 
 /**
  * @brief State representing the incompressible velocity (u, v) and pressure (p) fields.
@@ -16,7 +15,7 @@ public:
     Vector p; // Pressure
     std::shared_ptr<Mesh> mesh;
 
-    FluidState(std::shared_ptr<Mesh> m) 
+    FluidState(std::shared_ptr<Mesh> m)
         : u(m->num_nodes(), 0.0), v(m->num_nodes(), 0.0), p(m->num_nodes(), 0.0), mesh(m) {}
 
     void update(const std::vector<double>& delta) override {
